@@ -70,11 +70,21 @@ jobs:
             echo "Health check attempt ${attempt}/${MAX_ATTEMPTS} on ${HEALTH_URL}"
 
             # Use explicit timeouts: 10s connect, 20s total
-            status=$(curl --connect-timeout 10 --max-time 20 -s -o /dev/null -w "%{http_code}" "${HEALTH_URL}" || echo "000")
+            # Store curl exit code and http status separately
+            set +e
+            status=$(curl --connect-timeout 10 --max-time 20 -s -o /dev/null -w "%{http_code}" "${HEALTH_URL}" 2>/dev/null)
+            curl_exit=$?
+            set -e
 
-            echo "HTTP status: ${status}"
+            # If curl failed, set status to 000
+            if [ $curl_exit -ne 0 ]; then
+              status="000"
+              echo "HTTP status: ${status} (curl exit code: ${curl_exit})"
+            else
+              echo "HTTP status: ${status}"
+            fi
 
-            if [ "$status" -ge 200 ] && [ "$status" -lt 400 ]; then
+            if [ "$status" -ge 200 ] && [ "$status" -lt 400 ] 2>/dev/null; then
               echo "Health check succeeded!"
               exit 0
             fi
