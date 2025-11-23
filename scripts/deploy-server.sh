@@ -73,14 +73,23 @@ log "installing frontend dependencies (npm ci)"
 (
   cd frontend
 
-  # 如果 node_modules 存在但有问题，完全清理
-  if [ -d "node_modules" ] && ! npm ci --no-progress 2>/dev/null; then
-    log "npm ci failed, cleaning node_modules and retrying..."
-    rm -rf node_modules
-    npm cache clean --force 2>/dev/null || true
+  # 如果 node_modules 存在且不是空目录，先尝试 npm ci
+  if [ -d "node_modules" ] && [ "$(ls -A node_modules 2>/dev/null)" ]; then
+    log "node_modules exists, trying npm ci..."
+    if ! npm ci --no-progress 2>&1; then
+      log "npm ci failed, cleaning node_modules and npm cache..."
+      cd ..
+      rm -rf frontend/node_modules
+      npm cache clean --force 2>/dev/null || true
+      cd frontend
+    else
+      # npm ci 成功，直接返回
+      exit 0
+    fi
   fi
 
   # 执行干净安装
+  log "running clean npm ci..."
   npm ci --no-progress
 )
 
