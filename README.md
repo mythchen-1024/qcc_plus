@@ -172,6 +172,48 @@ curl http://localhost:8000/v1/messages \
 
 ⚠️ **安全警告**：生产环境必须修改默认的 `ADMIN_API_KEY` 和 `DEFAULT_PROXY_API_KEY`！
 
+## 🌐 官方网站
+
+我们正在打造一个**前无古人后无来者**的3D交互式官网！
+
+### 设计理念："Quantum Gateway" - 量子之门
+
+- 🌌 **3D量子隧道首屏** - 100k粒子实时渲染
+- 🔮 **全息架构图** - 可交互的3D架构可视化
+- 🌊 **数据流瀑布** - 实时展示API请求流动
+- 💎 **功能矩阵立方体** - 6面体展示核心功能
+- 🎮 **沉浸式代码演示** - 3D空间中的可运行终端
+
+### 技术栈
+
+- Next.js 14 + React 18 + TypeScript
+- Three.js + React Three Fiber (3D渲染)
+- GSAP + Framer Motion (动画)
+- Tailwind CSS (样式)
+- Monaco Editor (代码编辑器)
+
+### 快速开始
+
+```bash
+# 初始化官网项目
+./scripts/init-website.sh
+
+# 进入网站目录
+cd website
+
+# 启动开发服务器
+pnpm dev
+```
+
+### 文档
+
+- [设计概念文档](docs/website-design-concept.md) - 完整的视觉设计和创新点
+- [技术实现规格](docs/website-technical-spec.md) - 详细的技术方案和代码示例
+- [实现路线图](docs/website-implementation-roadmap.md) - 6周开发计划
+- [文档总览](docs/website-README.md) - 官网文档导航
+
+---
+
 ## 文档
 
 - [多租户架构设计](docs/multi-tenant-architecture.md) - 完整的多租户系统架构

@@ -37,12 +37,18 @@ qcc_plus/
 │   ├── src/            # TypeScript/React 源码
 │   ├── dist/           # 构建输出（Git 忽略）
 │   └── package.json
+├── website/            # 官网源码（Next.js 14 + Three.js）
+│   ├── app/            # Next.js App Router
+│   ├── components/     # React 组件（3D、UI、动画）
+│   ├── hooks/          # 自定义 Hooks
+│   ├── lib/            # 工具库
+│   └── public/         # 静态资源（模型、纹理、图片）
 ├── web/                # Go embed 前端资源（生产）
 │   ├── embed.go        # Embed 声明
 │   └── dist/           # 前端构建产物（从 frontend/dist 复制）
 ├── cccli/              # 系统 prompt 模板和工具定义（embed）
-├── scripts/            # 部署脚本（包括前端构建、Docker 发布）
-├── docs/               # 项目文档（包括前端技术栈说明）
+├── scripts/            # 部署脚本（前端构建、Docker 发布、官网初始化）
+├── docs/               # 项目文档（包括前端技术栈、官网设计文档）
 ├── docker-compose.yml  # Docker Compose 配置
 └── Dockerfile          # Docker 镜像构建文件
 ```
@@ -118,15 +124,28 @@ docker compose up -d
 
 ## 文档导航
 
+### 主文档
 - **[README.md](README.md)** - 项目主页，快速开始和环境变量配置
 - **[docs/README.md](docs/README.md)** - 完整文档索引和导航
+- **[CLAUDE.md](CLAUDE.md)** - 项目记忆文件（本文件）
+
+### 后端文档
 - **[docs/multi-tenant-architecture.md](docs/multi-tenant-architecture.md)** - 多租户架构设计
 - **[docs/quick-start-multi-tenant.md](docs/quick-start-multi-tenant.md)** - 多租户快速开始
 - **[docs/cloudflare-tunnel.md](docs/cloudflare-tunnel.md)** - Cloudflare Tunnel 集成指南
-- **[docs/frontend-tech-stack.md](docs/frontend-tech-stack.md)** - 前端技术栈和开发流程
 - **[docs/health_check_mechanism.md](docs/health_check_mechanism.md)** - 健康检查机制
 - **[docs/docker-hub-publish.md](docs/docker-hub-publish.md)** - Docker Hub 发布流程
-- **[frontend/README.md](frontend/README.md)** - 前端开发指南
+
+### 前端文档
+- **[docs/frontend-tech-stack.md](docs/frontend-tech-stack.md)** - 管理界面技术栈和开发流程
+- **[frontend/README.md](frontend/README.md)** - 管理界面开发指南
+
+### 官网文档（新增）
+- **[docs/website-README.md](docs/website-README.md)** - 官网文档总览和导航
+- **[docs/website-design-concept.md](docs/website-design-concept.md)** - 设计概念与创新点
+- **[docs/website-technical-spec.md](docs/website-technical-spec.md)** - 技术实现规格
+- **[docs/website-implementation-roadmap.md](docs/website-implementation-roadmap.md)** - 6周实现路线图
+- **[scripts/init-website.sh](scripts/init-website.sh)** - 官网项目初始化脚本
 
 ## 任务启动通用流程
 <task_startup_flow description="接收到任何任务时的标准启动流程">
