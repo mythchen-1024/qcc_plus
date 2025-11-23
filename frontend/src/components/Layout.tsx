@@ -26,7 +26,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <>
       <nav className="layout-nav">
-        <div className="layout-brand">Claude Proxy</div>
+        <div className="layout-brand">QCC Plus</div>
         <div className="layout-links">
           <NavLink to="/admin/dashboard" className={linkClass}>
             仪表盘

@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/useAuth'
 
 import './Login.css'
 
-import loginIcon from '../assets/login-icon.png'
+import loginIcon from '../assets/qcc-plus-logo.png'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -43,10 +43,10 @@ export default function Login() {
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <img src={loginIcon} alt="Logo" className="login-icon" />
+          <img src={loginIcon} alt="QCC Plus Logo" className="login-icon" />
           <div className="login-title">
-            <h1>Welcome back</h1>
-            <p className="sub">登录 Claude Proxy 管理后台</p>
+            <h1>欢迎回来</h1>
+            <p className="sub">登录 QCC Plus 管理后台</p>
           </div>
         </div>
 
