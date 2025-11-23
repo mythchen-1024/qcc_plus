@@ -172,7 +172,7 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 	}
 	p.mu.Unlock()
 	if ok {
-		// 如果是更高优先级（权重更小）的节点且当前节点优先级更低，则自动切回。
+		// 恢复后重新在健康节点中选择最优的一个。
 		p.maybePromoteRecovered(n)
 	}
 }
@@ -182,16 +182,21 @@ func (p *Server) maybePromoteRecovered(n *Node) {
 		return
 	}
 	acc := p.nodeAccount[n.ID]
-	cur, _ := p.getActiveNodeForAccount(acc)
-	if cur == nil || cur.Failed || n.Weight < cur.Weight {
-		p.mu.Lock()
-		if acc != nil {
-			acc.ActiveID = n.ID
-		}
-		if p.store != nil && acc != nil {
-			_ = p.store.SetActive(context.Background(), acc.ID, n.ID)
-		}
-		p.mu.Unlock()
-		p.logger.Printf("auto-switch to recovered node %s (weight %d)", n.Name, n.Weight)
+	if acc == nil {
+		return
+	}
+
+	// 重新在所有健康节点中选择最佳节点，确保优先级正确。
+	p.mu.RLock()
+	prevActive := acc.ActiveID
+	p.mu.RUnlock()
+
+	best, err := p.selectBestAndActivate(acc)
+	if err != nil || best == nil {
+		return
+	}
+
+	if best.ID != prevActive {
+		p.logger.Printf("auto-switch to recovered node %s (weight %d)", best.Name, best.Weight)
 	}
 }

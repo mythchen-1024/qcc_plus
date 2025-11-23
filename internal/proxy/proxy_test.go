@@ -540,3 +540,167 @@ func TestLoginEmptyPasswordShowsError(t *testing.T) {
 		t.Fatalf("expected empty password error, got body: %s", rec.Body.String())
 	}
 }
+
+// TestNodeRecoveryAutoSwitch tests that when nodes recover, the system automatically
+// switches to the highest priority (lowest weight) healthy node.
+// Scenario:
+// 1. Create 3 nodes with weights 1, 2, 3
+// 2. All nodes fail
+// 3. Node 3 recovers -> should switch to node 3 (only healthy)
+// 4. Node 2 recovers -> should switch to node 2 (weight 2 < 3)
+// 5. Node 1 recovers -> should switch to node 1 (weight 1 is smallest)
+func TestNodeRecoveryAutoSwitch(t *testing.T) {
+	// Create 3 test servers with controllable health
+	healthy1, healthy2, healthy3 := false, false, false
+
+	up1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if healthy1 {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"content":[{"text":"ok"}]}`))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+	}))
+	defer up1.Close()
+
+	up2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if healthy2 {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"content":[{"text":"ok"}]}`))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+	}))
+	defer up2.Close()
+
+	up3 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if healthy3 {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"content":[{"text":"ok"}]}`))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+	}))
+	defer up3.Close()
+
+	// Create proxy server with fast health check
+	srv, err := NewBuilder().
+		WithUpstream(up1.URL).
+		WithAPIKey("test-key").
+		WithFailLimit(1).
+		WithHealthEvery(300 * time.Millisecond).
+		Build()
+	if err != nil {
+		t.Fatalf("build proxy: %v", err)
+	}
+
+	// Start health check loop
+	go srv.healthLoop()
+
+	// Update default node to weight 1
+	def := srv.getNode("default")
+	if err := srv.updateNode("default", "node1", def.URL.String(), &def.APIKey, 1); err != nil {
+		t.Fatalf("update default: %v", err)
+	}
+
+	// Add nodes 2 and 3
+	node2, err := srv.addNode("node2", up2.URL, "", 2)
+	if err != nil {
+		t.Fatalf("add node2: %v", err)
+	}
+	node3, err := srv.addNode("node3", up3.URL, "", 3)
+	if err != nil {
+		t.Fatalf("add node3: %v", err)
+	}
+
+	// Manually mark all nodes as failed to simulate failure
+	srv.mu.Lock()
+	srv.nodeIndex["default"].Failed = true
+	srv.nodeIndex["default"].Metrics.FailStreak = 1
+	srv.defaultAccount.FailedSet["default"] = struct{}{}
+	srv.nodeIndex[node2.ID].Failed = true
+	srv.nodeIndex[node2.ID].Metrics.FailStreak = 1
+	srv.defaultAccount.FailedSet[node2.ID] = struct{}{}
+	srv.nodeIndex[node3.ID].Failed = true
+	srv.nodeIndex[node3.ID].Metrics.FailStreak = 1
+	srv.defaultAccount.FailedSet[node3.ID] = struct{}{}
+	srv.mu.Unlock()
+
+	// Verify all nodes are failed
+	srv.mu.RLock()
+	if !srv.nodeIndex["default"].Failed {
+		t.Errorf("node1 should be failed")
+	}
+	if !srv.nodeIndex[node2.ID].Failed {
+		t.Errorf("node2 should be failed")
+	}
+	if !srv.nodeIndex[node3.ID].Failed {
+		t.Errorf("node3 should be failed")
+	}
+	srv.mu.RUnlock()
+
+	// Scenario 1: Node 3 recovers (should become active)
+	t.Log("Scenario 1: Node 3 recovers")
+	healthy3 = true
+	time.Sleep(800 * time.Millisecond) // Wait for health check
+
+	srv.mu.RLock()
+	activeID := srv.defaultAccount.ActiveID
+	node3Failed := srv.nodeIndex[node3.ID].Failed
+	srv.mu.RUnlock()
+	if node3Failed {
+		t.Errorf("node3 should be healthy after recovery")
+	}
+	if activeID != node3.ID {
+		t.Errorf("expected node3 to be active after recovery, got %s", activeID)
+	}
+
+	// Scenario 2: Node 2 recovers (should switch to node2 due to lower weight)
+	t.Log("Scenario 2: Node 2 recovers")
+	healthy2 = true
+	time.Sleep(800 * time.Millisecond) // Wait for health check
+
+	srv.mu.RLock()
+	activeID = srv.defaultAccount.ActiveID
+	node2Failed := srv.nodeIndex[node2.ID].Failed
+	srv.mu.RUnlock()
+	if node2Failed {
+		t.Errorf("node2 should be healthy after recovery")
+	}
+	if activeID != node2.ID {
+		t.Errorf("expected node2 to be active after recovery (weight 2 < 3), got %s", activeID)
+	}
+
+	// Scenario 3: Node 1 recovers (should switch to node1 due to lowest weight)
+	t.Log("Scenario 3: Node 1 recovers")
+	healthy1 = true
+	time.Sleep(800 * time.Millisecond) // Wait for health check
+
+	srv.mu.RLock()
+	activeID = srv.defaultAccount.ActiveID
+	node1Failed := srv.nodeIndex["default"].Failed
+	srv.mu.RUnlock()
+	if node1Failed {
+		t.Errorf("node1 should be healthy after recovery")
+	}
+	if activeID != "default" {
+		t.Errorf("expected node1 to be active after recovery (weight 1 is lowest), got %s", activeID)
+	}
+
+	// Reverse scenario: Node 1 fails again
+	t.Log("Scenario 4: Node 1 fails again")
+	healthy1 = false
+	// Simulate failure by incrementing FailStreak and calling handleFailure
+	srv.mu.Lock()
+	srv.nodeIndex["default"].Metrics.FailStreak = 1
+	srv.mu.Unlock()
+	srv.handleFailure("default", "simulated failure")
+	time.Sleep(100 * time.Millisecond) // Small delay for processing
+
+	srv.mu.RLock()
+	activeID = srv.defaultAccount.ActiveID
+	srv.mu.RUnlock()
+	if activeID != node2.ID {
+		t.Errorf("expected node2 to be active after node1 fails, got %s", activeID)
+	}
+}
