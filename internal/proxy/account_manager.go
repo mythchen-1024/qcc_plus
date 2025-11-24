@@ -13,6 +13,7 @@ import (
 
 type accountContextKey struct{}
 type isAdminContextKey struct{}
+type nodeContextKey struct{}
 
 func (p *Server) createAccount(name, proxyKey, password string, isAdmin bool) (*Account, error) {
 	name = strings.TrimSpace(name)
@@ -68,6 +69,18 @@ func accountFromCtx(r *http.Request) *Account {
 	if v := r.Context().Value(accountContextKey{}); v != nil {
 		if acc, ok := v.(*Account); ok {
 			return acc
+		}
+	}
+	return nil
+}
+
+func nodeFromCtx(r *http.Request) *Node {
+	if r == nil {
+		return nil
+	}
+	if v := r.Context().Value(nodeContextKey{}); v != nil {
+		if n, ok := v.(*Node); ok {
+			return n
 		}
 	}
 	return nil

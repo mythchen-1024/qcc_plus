@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 
+	"qcc_plus/internal/notify"
 	"qcc_plus/internal/store"
 )
 
@@ -53,10 +54,21 @@ func (p *Server) addNodeToAccount(acc *Account, name, rawURL, apiKey string, wei
 		_ = p.store.UpsertNode(context.Background(), rec)
 	}
 
+	if p.notifyMgr != nil {
+		p.notifyMgr.Publish(notify.Event{
+			AccountID:  acc.ID,
+			EventType:  notify.EventNodeAdded,
+			Title:      "节点新增",
+			Content:    fmt.Sprintf("**节点名称**: %s\n**地址**: %s\n**权重**: %d\n**时间**: %s", node.Name, node.URL.String(), node.Weight, time.Now().Format("2006-01-02 15:04:05")),
+			DedupKey:   node.ID,
+			OccurredAt: time.Now(),
+		})
+	}
+
 	// 新节点优先级更高或当前无有效节点时，触发一次重选
 	if needSwitch {
 		p.logger.Printf("auto-switch after adding node %s (weight %d)", node.Name, node.Weight)
-		_, _ = p.selectBestAndActivate(acc)
+		_, _ = p.selectBestAndActivate(acc, "新增节点")
 	}
 	return node, nil
 }
@@ -97,31 +109,67 @@ func (p *Server) updateNode(id, name, rawURL string, apiKey *string, weight int)
 		}
 	}
 
+	if p.notifyMgr != nil && acc != nil {
+		p.notifyMgr.Publish(notify.Event{
+			AccountID:  acc.ID,
+			EventType:  notify.EventNodeUpdated,
+			Title:      "节点已更新",
+			Content:    fmt.Sprintf("**节点名称**: %s\n**地址**: %s\n**权重**: %d", n.Name, n.URL.String(), n.Weight),
+			DedupKey:   n.ID,
+			OccurredAt: time.Now(),
+		})
+	}
+
 	// 权重变更可能影响优先级，事件驱动触发一次重选
 	if acc != nil && oldWeight != weight {
 		p.logger.Printf("node %s weight changed %d -> %d, reselecting active node", n.Name, oldWeight, weight)
-		_, _ = p.selectBestAndActivate(acc)
+		_, _ = p.selectBestAndActivate(acc, "权重调整")
 	}
 	return nil
 }
 
 func (p *Server) deleteNode(id string) error {
 	p.mu.Lock()
-	defer p.mu.Unlock()
-	if _, ok := p.nodeIndex[id]; !ok {
+	n, ok := p.nodeIndex[id]
+	if !ok {
+		p.mu.Unlock()
 		return fmt.Errorf("node %s not found", id)
 	}
 	acc := p.nodeAccount[id]
-	delete(acc.Nodes, id)
-	delete(acc.FailedSet, id)
+	accID := ""
+	if acc != nil {
+		accID = acc.ID
+		delete(acc.Nodes, id)
+		delete(acc.FailedSet, id)
+		if acc.ActiveID == id {
+			acc.ActiveID = ""
+		}
+	}
 	delete(p.nodeIndex, id)
 	delete(p.nodeAccount, id)
-	if acc.ActiveID == id {
-		acc.ActiveID = ""
-	}
+	p.mu.Unlock()
+
 	if p.store != nil {
-		return p.store.DeleteNode(context.Background(), id)
+		if err := p.store.DeleteNode(context.Background(), id); err != nil {
+			return err
+		}
 	}
+
+	if p.notifyMgr != nil && acc != nil {
+		baseURL := ""
+		if n.URL != nil {
+			baseURL = n.URL.String()
+		}
+		p.notifyMgr.Publish(notify.Event{
+			AccountID:  accID,
+			EventType:  notify.EventNodeDeleted,
+			Title:      "节点已删除",
+			Content:    fmt.Sprintf("**节点名称**: %s\n**地址**: %s", n.Name, baseURL),
+			DedupKey:   n.ID,
+			OccurredAt: time.Now(),
+		})
+	}
+
 	return nil
 }
 
@@ -162,7 +210,7 @@ func (p *Server) getActiveNodeForAccount(acc *Account) (*Node, error) {
 	p.mu.RUnlock()
 
 	if !ok || failed {
-		return p.selectBestAndActivate(acc)
+		return p.selectBestAndActivate(acc, "当前节点不可用")
 	}
 	return n, nil
 }
@@ -176,12 +224,18 @@ func (p *Server) getActiveNode(acc ...*Account) (*Node, error) {
 }
 
 // 选择最低权重（最高优先级）的健康节点并激活。
-func (p *Server) selectBestAndActivate(acc *Account) (*Node, error) {
+func (p *Server) selectBestAndActivate(acc *Account, reason ...string) (*Node, error) {
 	if acc == nil {
 		return nil, ErrNoActiveNode
 	}
+	switchReason := "自动切换"
+	if len(reason) > 0 && reason[0] != "" {
+		switchReason = reason[0]
+	}
+
 	p.mu.Lock()
-	defer p.mu.Unlock()
+	prevID := acc.ActiveID
+	prevNode := acc.Nodes[prevID]
 	bestID := ""
 	var bestNode *Node
 	for id, n := range acc.Nodes {
@@ -194,12 +248,30 @@ func (p *Server) selectBestAndActivate(acc *Account) (*Node, error) {
 		}
 	}
 	if bestNode == nil {
+		p.mu.Unlock()
 		return nil, ErrNoActiveNode
 	}
 	acc.ActiveID = bestID
 	if p.store != nil {
 		_ = p.store.SetActive(context.Background(), acc.ID, bestID)
 	}
+	p.mu.Unlock()
+
+	if p.notifyMgr != nil && acc != nil && prevID != bestID {
+		fromName := "-"
+		if prevNode != nil {
+			fromName = prevNode.Name
+		}
+		p.notifyMgr.Publish(notify.Event{
+			AccountID:  acc.ID,
+			EventType:  notify.EventNodeSwitched,
+			Title:      "节点自动切换",
+			Content:    fmt.Sprintf("**从节点**: %s\n**到节点**: %s (权重: %d)\n**切换原因**: %s", chooseNonEmpty(fromName, "-"), bestNode.Name, bestNode.Weight, switchReason),
+			DedupKey:   fmt.Sprintf("switch:%s", acc.ID),
+			OccurredAt: time.Now(),
+		})
+	}
+
 	return bestNode, nil
 }
 
@@ -223,10 +295,21 @@ func (p *Server) disableNode(id string) error {
 		}
 	}
 
+	if p.notifyMgr != nil && acc != nil {
+		p.notifyMgr.Publish(notify.Event{
+			AccountID:  acc.ID,
+			EventType:  notify.EventNodeDisabled,
+			Title:      "节点已禁用",
+			Content:    fmt.Sprintf("**节点名称**: %s\n**操作**: 手动禁用", n.Name),
+			DedupKey:   n.ID,
+			OccurredAt: time.Now(),
+		})
+	}
+
 	// 如果禁用的是当前活跃节点，立即切换到下一个可用节点
 	if wasActive {
 		p.logger.Printf("disabled active node %s, switching to next available", n.Name)
-		p.selectBestAndActivate(acc)
+		p.selectBestAndActivate(acc, "节点禁用")
 	}
 	return nil
 }
@@ -253,6 +336,17 @@ func (p *Server) enableNode(id string) error {
 		if err := p.store.UpsertNode(context.Background(), rec); err != nil {
 			return err
 		}
+	}
+
+	if p.notifyMgr != nil && acc != nil {
+		p.notifyMgr.Publish(notify.Event{
+			AccountID:  acc.ID,
+			EventType:  notify.EventNodeEnabled,
+			Title:      "节点已启用",
+			Content:    fmt.Sprintf("**节点名称**: %s\n**权重**: %d", n.Name, n.Weight),
+			DedupKey:   n.ID,
+			OccurredAt: time.Now(),
+		})
 	}
 
 	// 检查是否需要切换到刚启用的节点（如果其优先级更高）

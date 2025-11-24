@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"qcc_plus/internal/notify"
 	"qcc_plus/internal/store"
 	"qcc_plus/internal/tunnel"
 )
@@ -39,6 +41,7 @@ type Server struct {
 	healthRT    http.RoundTripper
 	store       *store.Store
 	adminKey    string
+	notifyMgr   *notify.Manager
 
 	tunnelMgr *tunnel.Manager
 	tunnelMu  sync.Mutex
@@ -273,16 +276,38 @@ func (p *Server) getAccountByID(id string) *Account {
 	return p.accountByID[id]
 }
 
+func (p *Server) publishTunnelEvent(eventType, title, content string) {
+	if p.notifyMgr == nil {
+		return
+	}
+	accID := store.DefaultAccountID
+	if p.defaultAccount != nil && p.defaultAccount.ID != "" {
+		accID = p.defaultAccount.ID
+	}
+	p.notifyMgr.Publish(notify.Event{
+		AccountID:  accID,
+		EventType:  eventType,
+		Title:      title,
+		Content:    content,
+		DedupKey:   "tunnel",
+		OccurredAt: time.Now(),
+	})
+}
+
 // StartTunnel 根据存储配置启动 Cloudflare Tunnel。
 func (p *Server) StartTunnel() error {
 	if p.store == nil {
-		return errors.New("未启用存储，无法读取隧道配置")
+		err := errors.New("未启用存储，无法读取隧道配置")
+		p.publishTunnelEvent(notify.EventSystemTunnelError, "隧道启动失败", fmt.Sprintf("**错误**: %s", err.Error()))
+		return err
 	}
 
 	p.tunnelMu.Lock()
 	if p.tunnelMgr != nil {
 		p.tunnelMu.Unlock()
-		return errors.New("隧道已运行")
+		err := errors.New("隧道已运行")
+		p.publishTunnelEvent(notify.EventSystemTunnelError, "隧道启动失败", fmt.Sprintf("**错误**: %s", err.Error()))
+		return err
 	}
 	p.tunnelMu.Unlock()
 
@@ -292,12 +317,15 @@ func (p *Server) StartTunnel() error {
 	cfg, err := p.store.GetTunnelConfig(ctx)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
-			return errors.New("尚未保存隧道配置")
+			err = errors.New("尚未保存隧道配置")
 		}
+		p.publishTunnelEvent(notify.EventSystemTunnelError, "隧道启动失败", fmt.Sprintf("**错误**: %s", err.Error()))
 		return err
 	}
 	if cfg.APIToken == "" || cfg.Subdomain == "" {
-		return errors.New("api_token 与 subdomain 不能为空")
+		err := errors.New("api_token 与 subdomain 不能为空")
+		p.publishTunnelEvent(notify.EventSystemTunnelError, "隧道启动失败", fmt.Sprintf("**错误**: %s", err.Error()))
+		return err
 	}
 
 	mgr, err := tunnel.NewManager(tunnel.TunnelConfig{
@@ -308,12 +336,14 @@ func (p *Server) StartTunnel() error {
 	})
 	if err != nil {
 		_ = p.updateTunnelStatus(ctx, cfg, "error", errString(err), cfg.PublicURL, cfg.Enabled)
+		p.publishTunnelEvent(notify.EventSystemTunnelError, "隧道启动失败", fmt.Sprintf("**错误**: %s", err.Error()))
 		return err
 	}
 
 	localURL := buildLocalURL(p.listenAddr)
 	if err := mgr.Start(context.Background(), localURL); err != nil {
 		_ = p.updateTunnelStatus(ctx, cfg, "error", errString(err), cfg.PublicURL, cfg.Enabled)
+		p.publishTunnelEvent(notify.EventSystemTunnelError, "隧道启动失败", fmt.Sprintf("**错误**: %s", err.Error()))
 		return err
 	}
 
@@ -323,12 +353,15 @@ func (p *Server) StartTunnel() error {
 	cfg.Enabled = true
 	if err := p.store.SaveTunnelConfig(ctx, *cfg); err != nil {
 		_ = mgr.Stop()
+		p.publishTunnelEvent(notify.EventSystemTunnelError, "隧道启动失败", fmt.Sprintf("**错误**: %s", err.Error()))
 		return err
 	}
 
 	p.tunnelMu.Lock()
 	p.tunnelMgr = mgr
 	p.tunnelMu.Unlock()
+
+	p.publishTunnelEvent(notify.EventSystemTunnelStarted, "隧道已启动", fmt.Sprintf("**子域名**: %s\n**公网地址**: %s", cfg.Subdomain, cfg.PublicURL))
 	return nil
 }
 
@@ -361,6 +394,7 @@ func (p *Server) StopTunnel() error {
 		_ = p.store.SaveTunnelConfig(ctx, *cfg)
 	}
 
+	p.publishTunnelEvent(notify.EventSystemTunnelStopped, "隧道已停止", fmt.Sprintf("**状态**: %s", chooseNonEmpty(errString(stopErr), "正常停止")))
 	return stopErr
 }
 

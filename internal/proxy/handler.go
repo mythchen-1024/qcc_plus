@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"qcc_plus/internal/version"
 	"qcc_plus/web"
 )
 
@@ -72,9 +73,25 @@ func (p *Server) handler() http.Handler {
 	apiMux.HandleFunc("/admin/api/tunnel/start", p.requireSession(p.handleTunnelStart))
 	apiMux.HandleFunc("/admin/api/tunnel/stop", p.requireSession(p.handleTunnelStop))
 	apiMux.HandleFunc("/admin/api/tunnel/zones", p.requireSession(p.handleTunnelZones))
+	apiMux.HandleFunc("/api/notification/channels", p.requireSession(p.handleNotificationChannels))
+	apiMux.HandleFunc("/api/notification/channels/", p.requireSession(p.handleNotificationChannelByID))
+	apiMux.HandleFunc("/api/notification/subscriptions", p.requireSession(p.handleNotificationSubscriptions))
+	apiMux.HandleFunc("/api/notification/subscriptions/", p.requireSession(p.handleNotificationSubscriptionByID))
+	apiMux.HandleFunc("/api/notification/event-types", p.requireSession(p.listEventTypes))
+	apiMux.HandleFunc("/api/notification/test", p.requireSession(p.testNotification))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
+
+		if path == "/version" {
+			p.handleVersion(w, r)
+			return
+		}
+
+		if strings.HasPrefix(path, "/api/notification/") {
+			apiMux.ServeHTTP(w, r)
+			return
+		}
 
 		// API and auth endpoints
 		if strings.HasPrefix(path, "/admin/api/") ||
@@ -117,6 +134,7 @@ func (p *Server) handler() http.Handler {
 		start := time.Now()
 		mw := &metricsWriter{ResponseWriter: w, status: http.StatusOK}
 		ctx := context.WithValue(r.Context(), accountContextKey{}, account)
+		ctx = context.WithValue(ctx, nodeContextKey{}, node)
 		proxy.ServeHTTP(mw, r.WithContext(ctx))
 
 		p.recordMetrics(node.ID, start, mw, usage)
@@ -139,7 +157,7 @@ func (p *Server) requireSession(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// 判断是否为 API 请求
-		isAPIRequest := strings.HasPrefix(r.URL.Path, "/admin/api/")
+		isAPIRequest := strings.HasPrefix(r.URL.Path, "/admin/api/") || strings.HasPrefix(r.URL.Path, "/api/notification/")
 
 		cookie, err := r.Cookie("session_token")
 		if err != nil || cookie.Value == "" {
@@ -229,4 +247,12 @@ func (p *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r.WithContext(ctx))
 	}
+}
+
+func (p *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSON(w, http.StatusOK, version.GetVersionInfo())
 }

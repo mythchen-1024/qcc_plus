@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 )
@@ -54,3 +55,46 @@ type Config struct {
 }
 
 var ErrNotFound = errors.New("not found")
+
+// NotificationChannelRecord 描述通知渠道的持久化结构。
+type NotificationChannelRecord struct {
+	ID         string
+	AccountID  string
+	ChannelType string
+	Name       string
+	Config     json.RawMessage
+	Enabled    bool
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+// NotificationSubscriptionRecord 描述通知订阅。
+type NotificationSubscriptionRecord struct {
+	ID        string
+	AccountID string
+	ChannelID string
+	EventType string
+	Enabled   bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// NotificationHistoryRecord 记录通知发送历史。
+type NotificationHistoryRecord struct {
+	ID        string
+	AccountID string
+	ChannelID string
+	EventType string
+	Title     string
+	Content   string
+	Status    string
+	Error     string
+	SentAt    *time.Time
+	CreatedAt time.Time
+}
+
+// SubscriptionWithChannel 将订阅与渠道信息合并，便于发送层使用。
+type SubscriptionWithChannel struct {
+	Subscription NotificationSubscriptionRecord
+	Channel      NotificationChannelRecord
+}

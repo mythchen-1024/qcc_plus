@@ -13,12 +13,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"qcc_plus/internal/notify"
 )
 
 type retryTransport struct {
-	base     http.RoundTripper
-	attempts int
-	logger   *log.Logger
+	base      http.RoundTripper
+	attempts  int
+	logger    *log.Logger
+	notifyMgr *notify.Manager
 }
 
 func (t *retryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -70,6 +73,23 @@ func (t *retryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		if i < attempts-1 {
 			t.logger.Printf("retry %d/%d for %s: %v", i+1, attempts, req.URL.String(), lastErr)
 			time.Sleep(time.Duration(150*(i+1)) * time.Millisecond)
+		}
+	}
+
+	if t.notifyMgr != nil && lastErr != nil {
+		if acc := accountFromCtx(req); acc != nil {
+			nodeName := ""
+			if n := nodeFromCtx(req); n != nil {
+				nodeName = n.Name
+			}
+			errText := lastErr.Error()
+			t.notifyMgr.Publish(notify.Event{
+				AccountID:  acc.ID,
+				EventType:  notify.EventRequestFailed,
+				Title:      "请求失败告警",
+				Content:    fmt.Sprintf("**请求**: %s %s\n**节点**: %s\n**重试次数**: %d\n**错误信息**: %s", req.Method, req.URL.String(), chooseNonEmpty(nodeName, "-"), attempts, errText),
+				OccurredAt: time.Now(),
+			})
 		}
 	}
 	if lastResp != nil {
@@ -250,6 +270,21 @@ func (p *Server) newReverseProxy(node *Node, u *usage) *httputil.ReverseProxy {
 	}
 
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		if p.notifyMgr != nil {
+			if acc := accountFromCtx(r); acc != nil {
+				nodeName := ""
+				if n := nodeFromCtx(r); n != nil {
+					nodeName = n.Name
+				}
+				p.notifyMgr.Publish(notify.Event{
+					AccountID:  acc.ID,
+					EventType:  notify.EventRequestProxyError,
+					Title:      "代理错误告警",
+					Content:    fmt.Sprintf("**请求**: %s %s\n**节点**: %s\n**错误信息**: %v", r.Method, r.URL.String(), chooseNonEmpty(nodeName, "-"), err),
+					OccurredAt: time.Now(),
+				})
+			}
+		}
 		p.logger.Printf("proxy error %s %s: %v", r.Method, r.URL.String(), err)
 		http.Error(w, "upstream error", http.StatusBadGateway)
 	}

@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"time"
 
+	"qcc_plus/internal/notify"
 	"qcc_plus/internal/store"
 )
 
@@ -189,6 +190,14 @@ func (b *Builder) Build() (*Server, error) {
 		adminKey:       adminKey,
 		defaultAccName: defaultAccountName,
 		sessionMgr:     NewSessionManager(defaultSessionTTL),
+	}
+
+	if st != nil {
+		srv.notifyMgr = notify.NewManager(notify.NewStoreAdapter(st), notify.WithLogger(logger))
+	}
+
+	if rt, ok := transport.(*retryTransport); ok {
+		rt.notifyMgr = srv.notifyMgr
 	}
 
 	defaultCfg := store.Config{Retries: b.retries, FailLimit: b.failLimit, HealthEvery: b.healthEvery}

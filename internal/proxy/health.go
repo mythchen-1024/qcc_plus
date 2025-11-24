@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"qcc_plus/internal/notify"
 )
 
 // 处理失败：计数、记录错误、熔断并尝试切换。
@@ -29,6 +31,8 @@ func (p *Server) handleFailure(nodeID string, errMsg string) {
 	}
 	node.LastError = errMsg
 	failed := node.Metrics.FailStreak >= int64(failLimit)
+	failStreak := node.Metrics.FailStreak
+	nodeName := node.Name
 	if failed {
 		node.Failed = true
 		if acc != nil {
@@ -38,8 +42,18 @@ func (p *Server) handleFailure(nodeID string, errMsg string) {
 	p.mu.Unlock()
 
 	if failed {
-		p.logger.Printf("node %s marked failed: %s", node.Name, errMsg)
-		p.selectBestAndActivate(acc)
+		p.logger.Printf("node %s marked failed: %s", nodeName, errMsg)
+		if p.notifyMgr != nil && acc != nil {
+			p.notifyMgr.Publish(notify.Event{
+				AccountID:  acc.ID,
+				EventType:  notify.EventNodeFailed,
+				Title:      "节点故障告警",
+				Content:    fmt.Sprintf("**节点名称**: %s\n**错误信息**: %s\n**失败次数**: %d\n**时间**: %s", nodeName, errMsg, failStreak, time.Now().Format("2006-01-02 15:04:05")),
+				DedupKey:   node.ID,
+				OccurredAt: time.Now(),
+			})
+		}
+		p.selectBestAndActivate(acc, "节点故障")
 	}
 }
 
@@ -173,6 +187,16 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 	p.mu.Unlock()
 	if ok {
 		// 恢复后重新在健康节点中选择最优的一个。
+		if p.notifyMgr != nil && acc != nil && n != nil {
+			p.notifyMgr.Publish(notify.Event{
+				AccountID:  acc.ID,
+				EventType:  notify.EventNodeRecovered,
+				Title:      "节点已恢复",
+				Content:    fmt.Sprintf("**节点名称**: %s\n**恢复时间**: %s", n.Name, time.Now().Format("2006-01-02 15:04:05")),
+				DedupKey:   n.ID,
+				OccurredAt: time.Now(),
+			})
+		}
 		p.maybePromoteRecovered(n)
 	}
 }
@@ -191,7 +215,7 @@ func (p *Server) maybePromoteRecovered(n *Node) {
 	prevActive := acc.ActiveID
 	p.mu.RUnlock()
 
-	best, err := p.selectBestAndActivate(acc)
+	best, err := p.selectBestAndActivate(acc, "节点恢复")
 	if err != nil || best == nil {
 		return
 	}

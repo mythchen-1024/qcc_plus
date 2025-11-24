@@ -171,6 +171,57 @@ func (s *Store) recreateConfigTable() error {
 	return nil
 }
 
+func (s *Store) ensureNotificationTables(ctx context.Context) error {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS notification_channels (
+		id VARCHAR(64) PRIMARY KEY,
+		account_id VARCHAR(64) NOT NULL,
+		channel_type VARCHAR(64) NOT NULL,
+		name VARCHAR(255),
+		config JSON,
+		enabled BOOLEAN DEFAULT TRUE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		KEY idx_notification_channels_account (account_id)
+	)`); err != nil {
+		return err
+	}
+
+	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS notification_subscriptions (
+		id VARCHAR(64) PRIMARY KEY,
+		account_id VARCHAR(64) NOT NULL,
+		channel_id VARCHAR(64) NOT NULL,
+		event_type VARCHAR(128) NOT NULL,
+		enabled BOOLEAN DEFAULT TRUE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		UNIQUE KEY uniq_subscription (account_id, channel_id, event_type),
+		KEY idx_subscription_account_event (account_id, event_type),
+		FOREIGN KEY (channel_id) REFERENCES notification_channels(id) ON DELETE CASCADE
+	)`); err != nil {
+		return err
+	}
+
+	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS notification_history (
+		id VARCHAR(64) PRIMARY KEY,
+		account_id VARCHAR(64) NOT NULL,
+		channel_id VARCHAR(64) NOT NULL,
+		event_type VARCHAR(128) NOT NULL,
+		title VARCHAR(255),
+		content TEXT,
+		status VARCHAR(32) NOT NULL,
+		error TEXT,
+		sent_at TIMESTAMP NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		KEY idx_history_account_event (account_id, event_type),
+        KEY idx_history_channel (channel_id)
+	)`); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Store) ensureDefaultAccount(ctx context.Context) error {
 	// 默认账号自动创建已禁用，保留函数以兼容旧调用。
 	return nil
