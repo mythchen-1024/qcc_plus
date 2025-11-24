@@ -1,4 +1,4 @@
-import type { Account, Node, Config, TunnelState } from '../types'
+import type { Account, Node, Config, TunnelState, VersionInfo } from '../types'
 
 const defaultHeaders = { 'Content-Type': 'application/json' }
 
@@ -198,6 +198,10 @@ async function listZones(): Promise<string[]> {
   return res.zones || []
 }
 
+async function getVersion(): Promise<VersionInfo> {
+  return request<VersionInfo>('/version')
+}
+
 export default {
   login,
   logout,
@@ -218,4 +222,5 @@ export default {
   startTunnel,
   stopTunnel,
   listZones,
+  getVersion,
 }

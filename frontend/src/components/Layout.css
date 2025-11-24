@@ -66,6 +66,17 @@
     gap: 1.5rem;
 }
 
+.layout-version {
+    position: absolute;
+    right: 2rem;
+    bottom: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    opacity: 0.85;
+    padding: 0.2rem 0.75rem;
+    margin-top: 0.5rem;
+}
+
 .user-info {
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.6);

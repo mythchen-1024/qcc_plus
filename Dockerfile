@@ -2,7 +2,12 @@ FROM golang:1.21 AS build
 WORKDIR /app
 COPY . .
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/ccproxy ./cmd/cccli
+ARG VERSION
+ARG GIT_COMMIT
+ARG BUILD_DATE
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags "-X 'qcc_plus/internal/version.Version=${VERSION}' -X 'qcc_plus/internal/version.GitCommit=${GIT_COMMIT}' -X 'qcc_plus/internal/version.BuildDate=${BUILD_DATE}'" \
+    -o /app/ccproxy ./cmd/cccli
 
 # 下载 cloudflared
 FROM debian:bookworm-slim AS cloudflared

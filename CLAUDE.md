@@ -126,6 +126,7 @@ docker compose up -d
 
 ### 主文档
 - **[README.md](README.md)** - 项目主页，快速开始和环境变量配置
+- **[CHANGELOG.md](CHANGELOG.md)** - 版本更新日志
 - **[docs/README.md](docs/README.md)** - 完整文档索引和导航
 - **[CLAUDE.md](CLAUDE.md)** - 项目记忆文件（本文件）
 
@@ -346,8 +347,10 @@ docker compose up -d
     <release_workflow description="完整发布流程">
         <step_1 name="准备发布">
             <action>确保所有更改已提交到 main 分支</action>
+            <action>更新 CHANGELOG.md：将 [Unreleased] 内容移至新版本，添加版本号和日期</action>
             <action>更新 CLAUDE.md 中的版本号和更新日期</action>
             <action>确认 README.md 和相关文档已更新</action>
+            <action>提交更新：git commit -am "chore: 准备发布 vX.Y.Z"</action>
         </step_1>
 
         <step_2 name="创建 Git 标签">
@@ -381,8 +384,10 @@ docker compose up -d
             <prerequisite>确保 Docker Hub 仓库已创建: yxhpy520/qcc_plus</prerequisite>
             <command>./scripts/publish-docker.sh yxhpy520 vX.Y.Z</command>
             <note>脚本会自动构建镜像并推送 vX.Y.Z 和 latest 标签</note>
+            <note>版本信息会通过 ldflags 自动注入到二进制文件中</note>
+            <note>构建脚本自动获取 git commit、build date 并注入到 internal/version 包</note>
             <manual_steps>
-                <step>docker build -t yxhpy520/qcc_plus:vX.Y.Z .</step>
+                <step>docker build --build-arg VERSION=vX.Y.Z --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") -t yxhpy520/qcc_plus:vX.Y.Z .</step>
                 <step>docker tag yxhpy520/qcc_plus:vX.Y.Z yxhpy520/qcc_plus:latest</step>
                 <step>docker push yxhpy520/qcc_plus:vX.Y.Z</step>
                 <step>docker push yxhpy520/qcc_plus:latest</step>
@@ -392,6 +397,8 @@ docker compose up -d
         <step_5 name="验证发布">
             <check>GitHub Release: gh release view vX.Y.Z</check>
             <check>Docker 镜像: docker pull yxhpy520/qcc_plus:vX.Y.Z</check>
+            <check>版本信息: curl http://localhost:8000/version（启动容器后验证版本信息正确）</check>
+            <check>前端显示: 访问 http://localhost:8000/admin 查看侧边栏底部版本信息</check>
             <check>功能测试: 拉取镜像并运行基本功能测试</check>
         </step_5>
 
@@ -408,7 +415,10 @@ docker compose up -d
         <note>latest 标签始终指向最新的稳定版本</note>
         <note>发布前必须确保代码已通过所有测试</note>
         <note>GitHub Release 应包含详细的更新说明和安装指南</note>
+        <note>每次发布前必须更新 CHANGELOG.md，记录版本更新内容</note>
         <note>每次发布后立即更新 CLAUDE.md 记忆文件</note>
+        <note>版本信息通过构建时 ldflags 注入，无需手动修改代码</note>
+        <note>前端会自动从 /version API 获取版本信息并显示在侧边栏底部</note>
     </important_notes>
 
     <version_history description="版本发布历史">

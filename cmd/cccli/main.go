@@ -11,6 +11,7 @@ import (
 	"qcc_plus/internal/client"
 	"qcc_plus/internal/proxy"
 	"qcc_plus/internal/store"
+	"qcc_plus/internal/version"
 )
 
 func firstNonEmpty(vals ...string) string {
@@ -45,6 +46,9 @@ func buildLocalURL(listenAddr string) string {
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "proxy" {
+		info := version.GetVersionInfo()
+		log.Printf("qcc_plus version: %s (commit=%s, date=%s, go=%s)", info.Version, info.GitCommit, info.BuildDate, info.GoVersion)
+
 		upstreamRaw := firstNonEmpty(os.Getenv("UPSTREAM_BASE_URL"), os.Getenv("ANTHROPIC_BASE_URL"), "https://api.anthropic.com")
 		upstreamKey := firstNonEmpty(os.Getenv("UPSTREAM_API_KEY"), os.Getenv("ANTHROPIC_API_KEY"))
 		nodeName := getenvDefault("UPSTREAM_NAME", "default")

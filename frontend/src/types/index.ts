@@ -39,3 +39,10 @@ export interface TunnelState {
   status: string;
   last_error: string;
 }
+
+export interface VersionInfo {
+  version: string;
+  git_commit: string;
+  build_date: string;
+  go_version: string;
+}

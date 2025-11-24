@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useVersion } from '../hooks/useVersion'
 import './Layout.css'
 
 interface LayoutProps {
@@ -9,6 +10,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const { logout, user } = useAuth()
+  const { version, loading: versionLoading, error: versionError } = useVersion()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -22,6 +24,13 @@ export default function Layout({ children }: LayoutProps) {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `layout-link ${isActive ? 'active' : ''}`
+
+  const versionLabel = version ? `v${version.version}` : versionLoading ? 'v...' : 'v-'
+  const versionTitle = version
+    ? `commit: ${version.git_commit}\nbuild: ${version.build_date}\ngo: ${version.go_version}`
+    : versionError
+      ? `版本获取失败：${versionError.message}`
+      : '正在加载版本信息...'
 
   return (
     <>
@@ -55,6 +64,9 @@ export default function Layout({ children }: LayoutProps) {
           <button className="btn-logout" type="button" onClick={handleLogout}>
             退出登录
           </button>
+        </div>
+        <div className="layout-version" title={versionTitle}>
+          {versionLabel}
         </div>
       </nav>
       <main className="layout-main">{children}</main>

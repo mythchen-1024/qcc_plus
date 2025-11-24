@@ -17,12 +17,21 @@ DOCKER_USERNAME="$1"
 VERSION="$2"
 IMAGE_NAME="qcc_plus"
 FULL_IMAGE_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}"
+BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    GIT_COMMIT="$(git rev-parse --short HEAD)"
+else
+    GIT_COMMIT="unknown"
+fi
 
 echo "=========================================="
 echo "Docker Hub 发布准备"
 echo "=========================================="
 echo "镜像名称: ${FULL_IMAGE_NAME}"
 echo "版本标签: ${VERSION}"
+echo "Git Commit: ${GIT_COMMIT}"
+echo "Build Date: ${BUILD_DATE}"
 echo "=========================================="
 
 # 检查是否已登录 Docker Hub
@@ -36,7 +45,11 @@ fi
 # 构建 Docker 镜像
 echo ""
 echo "步骤 1: 构建 Docker 镜像..."
-docker build -t "${FULL_IMAGE_NAME}:${VERSION}" .
+docker build \
+    --build-arg VERSION="${VERSION}" \
+    --build-arg GIT_COMMIT="${GIT_COMMIT}" \
+    --build-arg BUILD_DATE="${BUILD_DATE}" \
+    -t "${FULL_IMAGE_NAME}:${VERSION}" .
 
 # 同时打上 latest 标签
 echo ""
