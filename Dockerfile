@@ -19,12 +19,13 @@ RUN apt-get update && apt-get install -y curl ca-certificates && \
 FROM debian:bookworm-slim
 WORKDIR /app
 
-# 安装运行时依赖（包括 Node.js 20 与 npm，用于 Claude CLI）
+# 安装运行时依赖（包括 Node.js 20，用于 Claude CLI）
+# 注意：NodeSource 的 nodejs 包已包含 npm，不需要单独安装
 RUN apt-get update && apt-get install -y ca-certificates curl gnupg && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update && apt-get install -y nodejs npm && \
+    apt-get update && apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
 # 安装 Claude Code CLI
