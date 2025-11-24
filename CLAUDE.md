@@ -4,8 +4,8 @@
 ## 最后更新
 - **更新日期**: 2025-11-24
 - **更新人**: Claude Code
-- **当前版本**: v1.0.0
-- **最新功能**: 新增 CLI 健康检查方式（支持 Claude Code CLI 无头模式验证）
+- **当前版本**: v1.1.0
+- **最新功能**: CLI 健康检查架构简化 - 移除 Docker-in-Docker，提升安全性和简化部署
 - **GitHub**: https://github.com/yxhpy/qcc_plus
 - **Docker Hub**: https://hub.docker.com/r/yxhpy520/qcc_plus
 

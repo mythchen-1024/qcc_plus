@@ -6,10 +6,97 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-11-24
+
 ### 新增
-- 版本信息展示功能
-- 更新日志查看功能
-- `/version` API 接口
+
+#### CLI 健康检查系统（重大特性）
+- 新增 CLI 健康检查方式（Claude Code CLI 无头模式验证）
+- 支持三种健康检查方式：API、HEAD、CLI
+- 节点健康检查信息实时显示（最后检查时间、延迟、错误信息）
+- CLI 健康检查架构简化：容器内直接安装 Claude CLI，移除 Docker-in-Docker
+
+#### 版本管理系统
+- 添加版本系统和 CHANGELOG 支持
+- `/version` API 接口，返回版本、构建信息
+- 前端侧边栏底部显示版本号
+
+#### 通知系统
+- 添加完整的通知系统支持
+- 节点故障和恢复的实时通知
+- 通知管理界面（查看、标记已读、删除）
+
+#### CI/CD 自动化
+- GitHub Actions 自动部署到测试环境
+- 推送到 test 分支自动触发部署
+- 健康检查验证部署成功
+
+#### 品牌和 UI
+- 统一前端品牌为 "QCC Plus"
+- 添加品牌 favicon（frontend 和 website）
+- 完整的 SEO meta 标签支持
+
+### 重构
+- **CLI 健康检查架构重大简化**
+  - 移除 Docker-in-Docker 依赖
+  - 不再需要挂载 Docker socket
+  - 在容器内直接安装 Node.js 和 Claude Code CLI
+  - 更快的健康检查响应（无容器启动开销）
+  - 更简单的部署配置
+- 移除 CLI 健康检查自动降级逻辑，保留真实错误信息
+
+### 修复
+
+#### CLI 健康检查
+- 修复 CLI 健康检查超时问题（增加到 15 秒）
+- 修复重启后失败节点不会自动进行健康检查的问题
+- 修正 Claude CLI 参数：使用 `-p` 代替不存在的 `--non-interactive`
+- 修复 Docker 构建问题：NodeSource nodejs 包已包含 npm
+
+#### 节点管理
+- 修复节点恢复时自动切换到优先级最高的健康节点
+- 修复节点更新时保留 APIKey（api_key 为可选参数）
+
+#### 通知系统
+- 修复通知 API 返回数据格式解析问题
+- 修复通知页面 `map is not a function` 错误
+
+#### CI/CD 和部署
+- 增强 CI/CD 健康检查机制：10s 初始等待 + 6 次重试
+- 修复健康检查 curl 命令输出异常问题
+- 改进 npm 安装错误处理逻辑
+- 增强部署脚本的 npm 安装健壮性
+- 修复部署脚本中的 awk 语法错误
+- 修复部署脚本 Git 同步问题
+- 在 workflow 中先强制更新代码
+
+#### 其他
+- 允许 favicon 和图标文件访问
+- 降级 Docker Compose 版本到 3.7 兼容旧版本
+
+### 改进
+
+#### 安全性
+- 移除 Docker socket 挂载要求，减少安全风险
+- 容器隔离性更好，无法访问宿主机 Docker
+
+#### 部署和配置
+- 简化 `docker-compose.yml` 配置
+- 更新 entrypoint 脚本，添加 Claude CLI 版本检查
+- 优化前端构建流程
+
+#### 文档
+- 完善项目文档，同步与代码一致
+- 重写 `docs/docker-cli-health-check-deployment.md`
+- 更新 `docs/health_check_mechanism.md`
+- 更新 `docs/cli_health_check_implementation.md`
+- 添加 favicon 设置文档
+- 添加版本发布规范文档
+- 添加 GitHub 社区健康文件（CONTRIBUTING、CODE_OF_CONDUCT 等）
+
+### 构建
+- 更新前端构建产物（包含版本显示和通知功能）
+- Docker Compose 升级到 v2.24.0
 
 ## [1.0.0] - 2025-11-23
 
@@ -20,7 +107,7 @@
 - Docker 化部署支持
 - MySQL 数据持久化
 - 多节点管理和自动故障切换
-- 健康检查和自动探活机制
+- 健康检查和自动探活机制（API、HEAD 方式）
 - 会话管理和权限控制
 - 实时监控和指标统计
 
@@ -36,5 +123,6 @@
 - 前端：React 18, TypeScript, Vite, Chart.js
 - 部署：Docker Compose, Cloudflare Tunnel
 
-[unreleased]: https://github.com/yxhpy/qcc_plus/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/yxhpy/qcc_plus/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/yxhpy/qcc_plus/releases/tag/v1.1.0
 [1.0.0]: https://github.com/yxhpy/qcc_plus/releases/tag/v1.0.0
