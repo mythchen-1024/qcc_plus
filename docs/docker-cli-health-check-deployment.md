@@ -1,62 +1,54 @@
-# CLI 健康检查 Docker 部署指南
+# CLI 健康检查部署指南
 
 ## 概述
-qcc_plus 支持三种健康检查方式，其中 CLI 方式需要 Docker 环境支持。本文档说明如何在 Docker 部署环境中启用 CLI 健康检查。
+qcc_plus 支持三种健康检查方式，其中 **CLI 方式** 现已改为在容器内直接安装 Claude Code CLI，无需 Docker-in-Docker 或挂载宿主机 Docker socket。
 
 ## 架构说明
 
-### 方案：挂载宿主机 Docker Socket
-- **原理**：将宿主机的 `/var/run/docker.sock` 挂载到容器内
-- **优点**：简单、高效、资源消耗低
-- **缺点**：需要宿主机有 Docker（生产环境通常都有）
+### 实现方式：容器内集成 Claude CLI
+- **原理**：在运行镜像中预装 Node.js 20 与 `@anthropic-ai/claude-code`，健康检查直接调用 `claude` 命令。
+- **优点**：简单、独立、无需额外依赖；不需要宿主机 Docker socket，安全性更高。
+- **特点**：镜像自带 CLI，启动即用，无需单独验证容器。
 
 ### 组件
-1. **qcc_plus 容器**：包含 Docker CLI 客户端
-2. **宿主机 Docker Daemon**：通过 socket 提供服务
-3. **claude-code-cli-verify 镜像**：自动构建于容器启动时
+1. **Node.js 20**：通过 apt 安装，供 Claude CLI 运行。
+2. **Claude Code CLI**：通过 npm 全局安装 `@anthropic-ai/claude-code`。
+3. **健康检查逻辑**：进程内直接执行 `claude -p "hi" --non-interactive --timeout 10s`。
 
 ## 部署步骤
 
 ### 1. 使用 docker-compose 部署（推荐）
+示例 `docker-compose.yml` 片段：
 
+```yaml
+services:
+  proxy:
+    build: .
+    container_name: qcc_plus
+    ports:
+      - "8000:8000"
+    environment:
+      UPSTREAM_BASE_URL: https://api.anthropic.com
+      UPSTREAM_API_KEY: your-api-key
+      PROXY_HEALTH_INTERVAL_SEC: 30
+    depends_on:
+      mysql:
+        condition: service_healthy
+```
+
+启动：
 ```bash
-# 克隆仓库
-git clone https://github.com/yxhpy/qcc_plus.git
-cd qcc_plus
-
-# 编辑配置
-cp .env.example .env
-# 修改 UPSTREAM_API_KEY 等配置
-
-# 启动服务
 docker-compose up -d
-
-# 查看日志（确认 CLI 镜像构建成功）
-docker-compose logs proxy
-```
-
-**预期输出**：
-```
-=== qcc_plus Docker Entrypoint ===
-✓ Docker socket detected at /var/run/docker.sock
-✓ Docker CLI available
-✓ Docker daemon accessible
-⚠ Claude CLI verify image not found, building...
-✓ Claude CLI verify image built successfully
-=== Starting ccproxy ===
 ```
 
 ### 2. 使用 docker run 部署
 
 ```bash
-# 构建镜像
 docker build -t qcc_plus:latest .
 
-# 运行容器（注意挂载 Docker socket）
 docker run -d \
   --name qcc_plus \
   -p 8000:8000 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
   -e UPSTREAM_BASE_URL=https://api.anthropic.com \
   -e UPSTREAM_API_KEY=your-api-key \
   qcc_plus:latest
@@ -70,28 +62,16 @@ docker pull yxhpy520/qcc_plus:latest
 docker run -d \
   --name qcc_plus \
   -p 8000:8000 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
   -e UPSTREAM_BASE_URL=https://api.anthropic.com \
   -e UPSTREAM_API_KEY=your-api-key \
   yxhpy520/qcc_plus:latest
 ```
 
+> 提示：与旧方案不同，无需 `-v /var/run/docker.sock:/var/run/docker.sock`，也无需额外的验证镜像。
+
 ## 配置说明
 
-### docker-compose.yml 关键配置
-
-```yaml
-services:
-  proxy:
-    build: .
-    volumes:
-      # 挂载宿主机 Docker socket，支持 CLI 健康检查
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      # ... 其他配置
-```
-
-### 环境变量
+### 关键环境变量
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
@@ -99,187 +79,84 @@ services:
 | `UPSTREAM_API_KEY` | 上游 API Key | - |
 | `PROXY_HEALTH_INTERVAL_SEC` | 健康检查间隔（秒） | 30 |
 
-## 验证部署
+### Dockerfile 关键片段
 
-### 1. 检查容器状态
+```dockerfile
+# 安装 Node.js 20
+RUN apt-get update && apt-get install -y ca-certificates curl gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update && apt-get install -y nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
 
-```bash
-docker ps | grep qcc_plus
+# 安装 Claude Code CLI
+RUN npm install -g @anthropic-ai/claude-code@latest && claude --version
 ```
 
-### 2. 检查日志
+## 验证部署
 
+### 1. 检查容器启动日志
 ```bash
 docker logs qcc_plus
 ```
 
-应该看到：
-- ✓ Docker socket detected
-- ✓ Docker CLI available
-- ✓ Claude CLI verify image built successfully
-
-### 3. 检查 CLI 镜像
-
-```bash
-docker exec qcc_plus docker images | grep claude-code-cli-verify
+预期输出片段：
+```
+=== qcc_plus Entrypoint ===
+✓ Claude Code CLI detected: @anthropic-ai/claude-code/x.x.x
+=== Starting ccproxy ===
 ```
 
-应该看到：
-```
-claude-code-cli-verify   latest   ...   ...   ...
-```
-
-### 4. 测试 CLI 健康检查
-
-1. 登录管理界面：http://localhost:8000/admin
-2. 创建一个节点，选择健康检查方式为 **"Claude Code CLI (Docker)"**
-3. 等待健康检查执行（默认 30 秒）
-4. 查看节点详情，`last_ping_error` 应该为空（成功）或显示具体错误
+### 2. 测试 CLI 健康检查
+1) 在管理界面创建节点，选择健康检查方式 `cli`。
+2) 等待健康检查周期（默认 30s）。
+3) 节点详情的 `last_ping_error` 为空即代表成功；若有错误会显示具体原因（如 API Key 缺失）。
 
 ## 故障排查
 
-### 问题 1：容器启动失败
+### 问题 1：Claude CLI 未安装
+- **症状**：日志出现 `claude: command not found`
+- **排查**：
+  ```bash
+  docker exec -it qcc_plus which claude
+  docker exec -it qcc_plus claude --version
+  ```
+- **解决**：重新构建镜像，确保 Dockerfile 中包含 Node.js 与 `npm install -g @anthropic-ai/claude-code`。
 
-**症状**：
+### 问题 2：CLI 健康检查超时
+- **症状**：`last_ping_error` 显示 `context deadline exceeded` 或 `claude cli failed: ... timeout`
+- **排查**：
+  1. 确认节点的 API Key 与 Base URL 正确；
+  2. 在容器内手动执行：
+     ```bash
+     docker exec -it qcc_plus claude -p "hi" --non-interactive --timeout 10s
+     ```
+  3. 观察是否联网受限或上游延迟过高。
+- **解决**：
+  - 调整节点配置或网络；
+  - 适当增大健康检查超时时间（代码层参数）。
+
+## 安全优势
+
+与旧的 Docker-in-Docker 方案相比：
+1. **无需特权访问**：不再挂载 Docker socket，避免容器控制宿主机 Docker。
+2. **隔离性更好**：容器无法接触宿主机守护进程，降低攻击面。
+3. **简化配置**：部署命令更短，减少故障点。
+4. **更轻量**：无需额外构建/运行验证容器。
+
+## 技术细节
+
+### Claude CLI 安装过程
+见上方 Dockerfile 片段，镜像构建时完成安装并在启动时通过 `claude --version` 校验。
+
+### 健康检查执行
+Go 代码直接调用本地 CLI：
+
+```go
+cmd := exec.CommandContext(ctx, "claude", "-p", prompt, "--non-interactive", "--timeout", "10s")
 ```
-ERROR: failed to bind to /var/run/docker.sock
-```
-
-**原因**：Docker socket 权限问题
-
-**解决方案**：
-```bash
-# 检查 socket 权限
-ls -l /var/run/docker.sock
-
-# 如果需要，修改权限
-sudo chmod 666 /var/run/docker.sock
-```
-
-### 问题 2：CLI 健康检查失败
-
-**症状**：节点详情显示 `executable file not found in $PATH`
-
-**检查步骤**：
-1. 进入容器
-   ```bash
-   docker exec -it qcc_plus bash
-   ```
-
-2. 检查 Docker CLI
-   ```bash
-   which docker
-   docker version
-   ```
-
-3. 检查 socket 挂载
-   ```bash
-   ls -l /var/run/docker.sock
-   ```
-
-4. 检查镜像
-   ```bash
-   docker images | grep claude-code-cli-verify
-   ```
-
-### 问题 3：CLI 镜像构建失败
-
-**症状**：启动日志显示 `Failed to build Claude CLI verify image`
-
-**原因**：
-- 网络问题（无法下载 Node.js 镜像）
-- Docker daemon 不可用
-
-**解决方案**：
-1. 手动构建镜像
-   ```bash
-   cd verify/claude_code_cli
-   docker build -f Dockerfile.verify_pass -t claude-code-cli-verify .
-   ```
-
-2. 然后重启 qcc_plus 容器
-   ```bash
-   docker restart qcc_plus
-   ```
-
-### 问题 4：容器内 Docker 不可用
-
-**症状**：`Cannot connect to the Docker daemon`
-
-**检查**：
-```bash
-# 在宿主机上检查 Docker daemon
-sudo systemctl status docker
-
-# 重启 Docker daemon
-sudo systemctl restart docker
-```
-
-## 安全注意事项
-
-### Docker Socket 挂载风险
-
-⚠️ **警告**：挂载 Docker socket 相当于给容器完全的宿主机 Docker 控制权。
-
-**风险**：
-- 容器可以启动任意容器
-- 可以挂载宿主机任意路径
-- 可以执行特权操作
-
-**缓解措施**：
-1. 仅在受信任的环境中使用
-2. 使用防火墙限制容器网络访问
-3. 定期审查容器日志
-4. 考虑使用 Docker-in-Docker (DinD) 替代方案（更复杂）
-
-### 生产环境建议
-
-1. **使用专用 Docker 用户**
-   ```bash
-   sudo groupadd docker
-   sudo usermod -aG docker qcc_plus
-   ```
-
-2. **限制容器能力**
-   ```yaml
-   security_opt:
-     - no-new-privileges:true
-   ```
-
-3. **使用只读挂载（如果可能）**
-   ```yaml
-   volumes:
-     - /var/run/docker.sock:/var/run/docker.sock:ro
-   ```
-   注意：只读模式下无法构建镜像，需要预先构建 CLI 镜像
-
-## 替代方案
-
-### 方案 A：使用 API 健康检查（推荐）
-
-如果不想挂载 Docker socket，可以使用 API 健康检查：
-
-1. 创建节点时选择 **"API 调用 (/v1/messages)"**
-2. 不需要 Docker 支持
-3. 验证完整的 API 调用链路
-
-### 方案 B：使用 HEAD 健康检查
-
-最轻量的方式：
-
-1. 创建节点时选择 **"HEAD 请求"**
-2. 不需要 Docker，不需要 API Key
-3. 仅验证连通性
-
-## 更新日志
-
-- **2025-11-24**：初始版本
-  - 支持挂载 Docker socket
-  - 自动构建 CLI 镜像
-  - 完整的部署说明
 
 ## 相关文档
-
 - [健康检查机制](health_check_mechanism.md)
 - [CLI 健康检查实现](cli_health_check_implementation.md)
-- [Docker Hub 发布流程](docker-hub-publish.md)

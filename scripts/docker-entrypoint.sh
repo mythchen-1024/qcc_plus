@@ -1,59 +1,19 @@
 #!/bin/bash
 set -e
 
-echo "=== qcc_plus Docker Entrypoint ==="
+echo "=== qcc_plus Entrypoint ==="
 
-# 检查 Docker 是否可用（通过挂载的 socket）
-if [ -S /var/run/docker.sock ]; then
-    echo "✓ Docker socket detected at /var/run/docker.sock"
-
-    # 检查 Docker CLI 是否可用
-    if command -v docker &> /dev/null; then
-        echo "✓ Docker CLI available"
-
-        # 测试 Docker 连接
-        if docker version &> /dev/null; then
-            echo "✓ Docker daemon accessible"
-
-            # 检查 claude-code-cli-verify 镜像是否存在
-            if ! docker images | grep -q claude-code-cli-verify; then
-                echo "⚠ Claude CLI verify image not found, building..."
-
-                # 构建镜像
-                if [ -f /app/claude-cli/Dockerfile ]; then
-                    cd /app/claude-cli
-                    # 使用 PIPESTATUS 获取 docker build 的真实退出码
-                    docker build -f Dockerfile -t claude-code-cli-verify . 2>&1 | head -30
-                    build_result=${PIPESTATUS[0]}
-
-                    if [ $build_result -eq 0 ]; then
-                        echo "✓ Claude CLI verify image built successfully"
-                    else
-                        echo "✗ Failed to build Claude CLI verify image (exit code: $build_result)"
-                        echo "  CLI health check will not be available"
-                    fi
-                else
-                    echo "✗ Dockerfile not found at /app/claude-cli/Dockerfile"
-                fi
-            else
-                echo "✓ Claude CLI verify image already exists"
-            fi
-        else
-            echo "✗ Cannot connect to Docker daemon"
-            echo "  Make sure Docker socket is properly mounted"
-            echo "  CLI health check will not be available"
-        fi
+if command -v claude >/dev/null 2>&1; then
+    if version=$(claude --version 2>&1); then
+        echo "✓ Claude Code CLI detected: ${version}"
     else
-        echo "✗ Docker CLI not found in container"
+        echo "✗ Claude Code CLI found but failed to report version"
     fi
 else
-    echo "⚠ Docker socket not mounted at /var/run/docker.sock"
-    echo "  CLI health check will not be available"
-    echo "  To enable: mount -v /var/run/docker.sock:/var/run/docker.sock"
+    echo "✗ Claude Code CLI not found; CLI health check will be unavailable"
 fi
 
 echo "=== Starting ccproxy ==="
 echo
 
-# 启动主程序，传递所有参数
 exec /usr/local/bin/ccproxy "$@"

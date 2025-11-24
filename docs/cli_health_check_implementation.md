@@ -9,12 +9,9 @@
 ## 实现内容
 
 ### 1. 技术验证 ✅
-- **位置**: `verify/claude_code_cli/`
-- **文件**:
-  - `Dockerfile.verify_pass` - Node.js 镜像 + Claude Code CLI
-  - `verify_cli_pass.go` - Go 测试代码
-  - `README_pass.md` - 使用说明
-- **测试结果**: ✅ 通过（成功调用 Claude CLI 并获得响应）
+- **位置**: `Dockerfile`
+- **内容**: 运行时镜像安装 Node.js 20 与 `@anthropic-ai/claude-code`，构建时执行 `claude --version` 校验。
+- **启动校验**: `scripts/docker-entrypoint.sh` 在启动日志中输出 CLI 版本，确保依赖可用。
 
 ### 2. 数据模型更新 ✅
 - **新增字段**: `health_check_method` (string)
@@ -35,9 +32,8 @@
 - **健康检查逻辑**: `internal/proxy/health.go`
   - `checkNodeHealth()` - 根据 `health_check_method` 分发
   - `healthCheckViaCLI()` - CLI 方式实现
-  - `defaultCLIRunner()` - Docker 调用封装
-  - `isDockerUnavailable()` - Docker 可用性检测
-  - 自动降级：CLI 失败时降级到 API 方式
+  - `defaultCLIRunner()` - 调用容器内 `claude` 可执行文件
+  - 自动降级：取消，CLI 失败直接返回真实错误
 
 - **存储层更新**: `internal/store/`
   - `node.go` - 持久化 `health_check_method` 字段
@@ -60,7 +56,7 @@
   - 选项：
     - `api` - "API 调用 (/v1/messages)"
     - `head` - "HEAD 请求"
-    - `cli` - "Claude Code CLI (Docker)"
+    - `cli` - "Claude Code CLI (容器内置)"（UI 文案可按需更新）
 
 ### 5. 测试验证 ✅
 - **位置**: `tests/health_check_cli/`
@@ -69,10 +65,10 @@
   - `TestHealthCheckAPI` - API 方式测试
   - `TestHealthCheckHEAD` - HEAD 方式测试
   - `TestHealthCheckCLI` - CLI 方式测试
-  - `TestHealthCheckCLIFallbackToAPI` - CLI 降级测试
+  - `TestHealthCheckCLINoFallback` - CLI 失败保留错误，不降级
 - **测试结果**: ✅ 所有测试通过 (PASS)
 
-### 6. 文���更新 ✅
+### 6. 文档更新 ✅
 - **健康检查机制**: `docs/health_check_mechanism.md`
   - 添加 CLI 方式说明
   - 三种方式对比表格
@@ -86,30 +82,26 @@
 ## 使用说明
 
 ### CLI 方式前置条件
-1. **Docker 环境** - 需要 Docker 已安装且可运行
-2. **预构建镜像** - 需要构建 `claude-code-cli-verify` 镜像
-   ```bash
-   cd verify/claude_code_cli
-   docker build -f Dockerfile.verify_pass -t claude-code-cli-verify .
-   ```
-3. **API Key** - 节点必须配置有效的 API Key
-4. **自动降级** - Docker 不可用时自动降级到 API 方式
+1. **镜像已内置 CLI** - 运行时镜像需包含 Node.js 20 与 `@anthropic-ai/claude-code`（官方镜像已完成）。
+2. **API Key** - 节点必须配置有效的 API Key。
+3. **Base URL** - 节点 Base URL 合法可达。
+4. **自定义镜像** - 如自行构建镜像，需保留 Dockerfile 中的 Node/CLI 安装步骤。
 
 ### 创建使用 CLI 健康检查的节点
 在管理界面创建节点时：
 1. 填写节点信息（名称、Base URL、API Key）
-2. 健康检查方式选择：**Claude Code CLI (Docker)**
+2. 健康检查方式选择：**Claude Code CLI (容器内置)**
 3. 保存节点
 
 系统将使用 CLI 无头模式进行健康检查验证。
 
 ## 技术亮点
 
-1. **自动降级** - CLI 方式失败时自动降级到 API 方式，确保可用性
-2. **Docker 集成** - 使用 Docker 容器隔离 CLI 环境
-3. **向后兼容** - 现有节点默认使用 API 方式，无破坏性变更
-4. **完整测试** - 包含单元测试和技术验证，确保功能可靠性
-5. **文档完善** - 详细的使用文档和常见问题解答
+1. **真实 CLI 路径** - 直接调用容器内 Claude CLI，无额外依赖。
+2. **错误可见性** - 失败不降级，原样返回 CLI 错误便于诊断。
+3. **向后兼容** - 现有节点默认使用 API 方式，无破坏性变更。
+4. **完整测试** - 包含单元测试和技术验证，确保功能可靠性。
+5. **文档完善** - 详细的使用文档和常见问题解答。
 
 ## 文件变更统计
 - **后端**: 11 个文件修改，1 个新增
@@ -120,10 +112,10 @@
 
 ## 下一步建议
 
-1. **构建 Docker 镜像** - 在部署环境中构建 `claude-code-cli-verify` 镜像
-2. **测试验证** - 在生产环境测试 CLI 健康检查功能
-3. **监控日志** - 观察 CLI 健康检查的执行情况和降级行为
-4. **性能评估** - 评估 CLI 方式的延迟和资源消耗
+1. **验证镜像依赖** - 部署前确认启动日志打印出 Claude CLI 版本。
+2. **测试验证** - 在生产环境测试 CLI 健康检查功能。
+3. **监控日志** - 观察 CLI 健康检查的执行情况和降级行为。
+4. **性能评估** - 评估 CLI 方式的延迟和资源消耗。
 
 ---
 

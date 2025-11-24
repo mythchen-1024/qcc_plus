@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -132,7 +131,7 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 	method := normalizeHealthCheckMethod(nodeCopy.HealthCheckMethod)
 	timeout := 5 * time.Second
 	if method == HealthCheckMethodCLI {
-		// CLI 方式需要启动容器和执行 CLI，需要更长的超时时间
+		// CLI 方式需要执行外部 CLI，需要更长的超时时间
 		timeout = 15 * time.Second
 	}
 
@@ -322,7 +321,7 @@ func (p *Server) healthCheckViaCLI(ctx context.Context, node Node) (bool, string
 	}
 
 	start := time.Now()
-	out, err := runner(ctx, "claude-code-cli-verify", env, "hi")
+	out, err := runner(ctx, "claude", env, "hi")
 	latency := time.Since(start)
 	if err != nil {
 		// 不再返回 fallback 标志，直接返回错误
@@ -337,34 +336,25 @@ func (p *Server) healthCheckViaCLI(ctx context.Context, node Node) (bool, string
 type CliRunner func(ctx context.Context, image string, env map[string]string, prompt string) (string, error)
 
 func defaultCLIRunner(ctx context.Context, image string, env map[string]string, prompt string) (string, error) {
-	args := []string{"run", "--rm"}
-	for k, v := range env {
-		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
-	}
-	args = append(args, image, "-p", prompt)
+	// image 参数保留以兼容旧接口（当前直接调用本地 claude CLI）。
+	_ = image
 
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	args := []string{"-p", prompt, "--non-interactive", "--timeout", "10s"}
+	cmd := exec.CommandContext(ctx, "claude", args...)
+
+	cmdEnv := os.Environ()
+	for k, v := range env {
+		cmdEnv = append(cmdEnv, fmt.Sprintf("%s=%s", k, v))
+	}
+	cmd.Env = cmdEnv
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("%w: stdout=%s stderr=%s", err, strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()))
+		return "", fmt.Errorf("claude cli failed: %w: stdout=%s stderr=%s", err, strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()))
 	}
-	return stdout.String(), nil
-}
 
-func isDockerUnavailable(err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, exec.ErrNotFound) {
-		return true
-	}
-	var execErr *exec.Error
-	if errors.As(err, &execErr) {
-		return true
-	}
-	lower := strings.ToLower(err.Error())
-	return strings.Contains(lower, "docker daemon") || strings.Contains(lower, "cannot connect to the docker daemon") || strings.Contains(lower, "permission denied while trying to connect to the docker daemon")
+	return stdout.String(), nil
 }
