@@ -14,26 +14,27 @@ const (
 
 // NodeRecord mirrors persistent fields for a proxy node.
 type NodeRecord struct {
-	ID          string
-	Name        string
-	BaseURL     string
-	APIKey      string
-	AccountID   string
-	Weight      int
-	Failed      bool
-	Disabled    bool
-	LastError   string
-	CreatedAt   time.Time
-	Requests    int64
-	FailCount   int64
-	FailStreak  int64
-	TotalBytes  int64
-	TotalInput  int64
-	TotalOutput int64
-	StreamDurMs int64
-	FirstByteMs int64
-	LastPingMs  int64
-	LastPingErr string
+	ID                string
+	Name              string
+	BaseURL           string
+	APIKey            string
+	AccountID         string
+	Weight            int
+	Failed            bool
+	Disabled          bool
+	LastError         string
+	CreatedAt         time.Time
+	Requests          int64
+	FailCount         int64
+	FailStreak        int64
+	TotalBytes        int64
+	TotalInput        int64
+	TotalOutput       int64
+	StreamDurMs       int64
+	FirstByteMs       int64
+	LastPingMs        int64
+	LastPingErr       string
+	LastHealthCheckAt time.Time
 }
 
 // AccountRecord 账号记录。
@@ -58,14 +59,14 @@ var ErrNotFound = errors.New("not found")
 
 // NotificationChannelRecord 描述通知渠道的持久化结构。
 type NotificationChannelRecord struct {
-	ID         string
-	AccountID  string
+	ID          string
+	AccountID   string
 	ChannelType string
-	Name       string
-	Config     json.RawMessage
-	Enabled    bool
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	Name        string
+	Config      json.RawMessage
+	Enabled     bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // NotificationSubscriptionRecord 描述通知订阅。

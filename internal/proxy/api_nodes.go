@@ -127,6 +127,10 @@ func (p *Server) listNodes(acc *Account) []map[string]interface{} {
 				healthRate = 0
 			}
 		}
+		lastHealthCheckAt := ""
+		if !n.Metrics.LastHealthCheckAt.IsZero() {
+			lastHealthCheckAt = n.Metrics.LastHealthCheckAt.Format(time.RFC3339)
+		}
 		out = append(out, map[string]interface{}{
 			"id":                    id,
 			"name":                  n.Name,
@@ -140,6 +144,9 @@ func (p *Server) listNodes(acc *Account) []map[string]interface{} {
 			"health_rate":           fmt.Sprintf("%.1f%%", healthRate),
 			"ping_ms":               n.Metrics.LastPingMS,
 			"ping_error":            n.Metrics.LastPingErr,
+			"last_ping_ms":          n.Metrics.LastPingMS,
+			"last_ping_error":       n.Metrics.LastPingErr,
+			"last_health_check_at":  lastHealthCheckAt,
 			"input_tokens":          n.Metrics.TotalInputTokens,
 			"output_tokens":         n.Metrics.TotalOutputTokens,
 			"total_bytes":           n.Metrics.TotalBytes,

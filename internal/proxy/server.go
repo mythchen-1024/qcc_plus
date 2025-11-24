@@ -211,6 +211,7 @@ func (p *Server) loadAccountsFromStore(defaultUpstream *url.URL, defaultCfg stor
 						FirstByteDur:      time.Duration(r.FirstByteMs) * time.Millisecond,
 						LastPingMS:        r.LastPingMs,
 						LastPingErr:       r.LastPingErr,
+						LastHealthCheckAt: r.LastHealthCheckAt,
 					},
 				}
 				acc.Nodes[n.ID] = n

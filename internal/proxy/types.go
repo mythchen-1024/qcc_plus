@@ -30,6 +30,7 @@ type metrics struct {
 	TotalBytes        int64
 	LastPingMS        int64
 	LastPingErr       string
+	LastHealthCheckAt time.Time
 	FailCount         int64 // 总失败次数（非200）
 	FailStreak        int64 // 连续失败次数
 }

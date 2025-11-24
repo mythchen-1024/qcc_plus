@@ -230,6 +230,13 @@ export default function Nodes() {
     return val.toLocaleString()
   }
 
+  const formatDateTime = (val?: string | null) => {
+    if (!val) return '从未检查'
+    const date = new Date(val)
+    if (Number.isNaN(date.getTime())) return '从未检查'
+    return date.toLocaleString('zh-CN')
+  }
+
   const renderStat = (label: string, value: string | number | undefined) => (
     <div className="stat-item">
       <div className="stat-label">{label}</div>
@@ -412,6 +419,18 @@ export default function Nodes() {
               {renderStat('名称', detailNode.name || '未命名')}
               {renderStat('Base URL', detailNode.base_url || '-')}
               {renderStat('权重', detailNode.weight ?? '-')} {renderStat('状态', statusInfo(detailNode).label)}
+            </div>
+            <div className="node-stats">
+              {renderStat('最后健康检查', formatDateTime(detailNode.last_health_check_at))}
+              {renderStat('Ping 延迟 (ms)', detailNode.last_ping_ms ?? '-')}
+              {detailNode.last_ping_error && (
+                <div className="stat-item" style={{ gridColumn: '1 / -1' }}>
+                  <div className="stat-label">Ping 错误</div>
+                  <div className="stat-value" style={{ color: 'var(--color-danger)' }}>
+                    {detailNode.last_ping_error}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="node-stats">
               {renderStat('请求数', formatNumber(detailNode.requests))}

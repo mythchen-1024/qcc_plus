@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -12,8 +13,13 @@ func (s *Store) UpsertNode(ctx context.Context, r NodeRecord) error {
 	}
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()
-	_, err := s.db.ExecContext(ctx, `INSERT INTO nodes (id,name,base_url,api_key,account_id,weight,failed,disabled,last_error,created_at,requests,fail_count,fail_streak,total_bytes,total_input,total_output,stream_dur_ms,first_byte_ms,last_ping_ms,last_ping_err)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+	healthAt := sql.NullTime{}
+	if !r.LastHealthCheckAt.IsZero() {
+		healthAt.Valid = true
+		healthAt.Time = r.LastHealthCheckAt
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO nodes (id,name,base_url,api_key,account_id,weight,failed,disabled,last_error,created_at,requests,fail_count,fail_streak,total_bytes,total_input,total_output,stream_dur_ms,first_byte_ms,last_ping_ms,last_ping_err,last_health_check_at)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON DUPLICATE KEY UPDATE
 			name=VALUES(name),
 			base_url=VALUES(base_url),
@@ -22,8 +28,11 @@ func (s *Store) UpsertNode(ctx context.Context, r NodeRecord) error {
 			weight=VALUES(weight),
 			failed=VALUES(failed),
 			disabled=VALUES(disabled),
-			last_error=VALUES(last_error)`,
-		r.ID, r.Name, r.BaseURL, r.APIKey, r.AccountID, r.Weight, r.Failed, r.Disabled, r.LastError, r.CreatedAt, r.Requests, r.FailCount, r.FailStreak, r.TotalBytes, r.TotalInput, r.TotalOutput, r.StreamDurMs, r.FirstByteMs, r.LastPingMs, r.LastPingErr)
+			last_error=VALUES(last_error),
+			last_ping_ms=VALUES(last_ping_ms),
+			last_ping_err=VALUES(last_ping_err),
+			last_health_check_at=VALUES(last_health_check_at)`,
+		r.ID, r.Name, r.BaseURL, r.APIKey, r.AccountID, r.Weight, r.Failed, r.Disabled, r.LastError, r.CreatedAt, r.Requests, r.FailCount, r.FailStreak, r.TotalBytes, r.TotalInput, r.TotalOutput, r.StreamDurMs, r.FirstByteMs, r.LastPingMs, r.LastPingErr, healthAt)
 	return err
 }
 
@@ -31,7 +40,7 @@ func (s *Store) GetNodesByAccount(ctx context.Context, accountID string) ([]Node
 	accountID = normalizeAccount(accountID)
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()
-	rows, err := s.db.QueryContext(ctx, `SELECT id,name,base_url,api_key,account_id,weight,failed,disabled,last_error,created_at,requests,fail_count,fail_streak,total_bytes,total_input,total_output,stream_dur_ms,first_byte_ms,last_ping_ms,last_ping_err FROM nodes WHERE account_id=?`, accountID)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,name,base_url,api_key,account_id,weight,failed,disabled,last_error,created_at,requests,fail_count,fail_streak,total_bytes,total_input,total_output,stream_dur_ms,first_byte_ms,last_ping_ms,last_ping_err,last_health_check_at FROM nodes WHERE account_id=?`, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +48,12 @@ func (s *Store) GetNodesByAccount(ctx context.Context, accountID string) ([]Node
 	var records []NodeRecord
 	for rows.Next() {
 		var r NodeRecord
-		if err := rows.Scan(&r.ID, &r.Name, &r.BaseURL, &r.APIKey, &r.AccountID, &r.Weight, &r.Failed, &r.Disabled, &r.LastError, &r.CreatedAt, &r.Requests, &r.FailCount, &r.FailStreak, &r.TotalBytes, &r.TotalInput, &r.TotalOutput, &r.StreamDurMs, &r.FirstByteMs, &r.LastPingMs, &r.LastPingErr); err != nil {
+		var lastHealthAt sql.NullTime
+		if err := rows.Scan(&r.ID, &r.Name, &r.BaseURL, &r.APIKey, &r.AccountID, &r.Weight, &r.Failed, &r.Disabled, &r.LastError, &r.CreatedAt, &r.Requests, &r.FailCount, &r.FailStreak, &r.TotalBytes, &r.TotalInput, &r.TotalOutput, &r.StreamDurMs, &r.FirstByteMs, &r.LastPingMs, &r.LastPingErr, &lastHealthAt); err != nil {
 			return nil, err
+		}
+		if lastHealthAt.Valid {
+			r.LastHealthCheckAt = lastHealthAt.Time
 		}
 		records = append(records, r)
 	}

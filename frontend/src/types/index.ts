@@ -22,6 +22,9 @@ export interface Node {
   stream_dur_ms?: number;
   input_tokens?: number;
   output_tokens?: number;
+  last_health_check_at?: string;
+  last_ping_ms?: number;
+  last_ping_error?: string;
 }
 
 export interface Config {

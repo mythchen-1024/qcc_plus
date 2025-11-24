@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"qcc_plus/internal/notify"
+	"qcc_plus/internal/store"
 )
 
 // 处理失败：计数、记录错误、熔断并尝试切换。
@@ -106,6 +107,8 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 		return
 	}
 
+	now := time.Now()
+
 	// 读锁保护节点查找，复制必要字段后立即解锁，避免与删除竞争。
 	p.mu.RLock()
 	node := acc.Nodes[id]
@@ -165,10 +168,16 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 		}
 	}
 
+	var (
+		rec           store.NodeRecord
+		shouldPersist bool
+	)
+
 	p.mu.Lock()
 	n := p.nodeIndex[id]
 	if n != nil {
 		acc := p.nodeAccount[id]
+		n.Metrics.LastHealthCheckAt = now
 		if ok {
 			n.Failed = false
 			n.LastError = ""
@@ -178,13 +187,21 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 				delete(acc.FailedSet, id)
 			}
 			if p.store != nil {
-				_ = p.store.UpsertNode(context.Background(), toRecord(n))
+				rec = toRecord(n)
+				shouldPersist = true
 			}
 		} else if pingErr != "" {
 			n.Metrics.LastPingErr = pingErr
+			if p.store != nil {
+				rec = toRecord(n)
+				shouldPersist = true
+			}
 		}
 	}
 	p.mu.Unlock()
+	if shouldPersist {
+		_ = p.store.UpsertNode(context.Background(), rec)
+	}
 	if ok {
 		// 恢复后重新在健康节点中选择最优的一个。
 		if p.notifyMgr != nil && acc != nil && n != nil {

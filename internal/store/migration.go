@@ -71,6 +71,7 @@ func (s *Store) ensureNodesTable(ctx context.Context) error {
             first_byte_ms BIGINT DEFAULT 0,
             last_ping_ms BIGINT DEFAULT -1,
             last_ping_err TEXT,
+			last_health_check_at DATETIME DEFAULT NULL,
 			KEY idx_nodes_account (account_id)
         )`
 	if _, err := s.db.ExecContext(ctx, stmt); err != nil {
@@ -104,6 +105,18 @@ func (s *Store) ensureNodesTable(ctx context.Context) error {
 			return err
 		}
 		if _, err := s.db.ExecContext(alterCtx, `UPDATE nodes SET account_id='`+DefaultAccountID+`' WHERE account_id IS NULL OR account_id=''`); err != nil {
+			return err
+		}
+	}
+
+	hasLastHealthCheckAt, err := s.columnExists(context.Background(), "nodes", "last_health_check_at")
+	if err != nil {
+		return err
+	}
+	if !hasLastHealthCheckAt {
+		alterCtx, cancel := withTimeout(context.Background())
+		defer cancel()
+		if _, err := s.db.ExecContext(alterCtx, `ALTER TABLE nodes ADD COLUMN last_health_check_at DATETIME DEFAULT NULL AFTER last_ping_err`); err != nil {
 			return err
 		}
 	}
