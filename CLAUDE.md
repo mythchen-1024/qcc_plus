@@ -2,10 +2,11 @@
 - 必须保证本文件简洁、准确，并且保证文件实时更新
 
 ## 最后更新
-- **更新日期**: 2025-11-24
+- **更新日期**: 2025-11-25
 - **更新人**: Claude Code
 - **当前版本**: v1.1.0
 - **最新功能**: CLI 健康检查架构简化 - 移除 Docker-in-Docker，提升安全性和简化部署
+- **最新更新**: 完善 Docker Hub 发布流程，添加仓库信息自动更新脚本
 - **GitHub**: https://github.com/yxhpy/qcc_plus
 - **Docker Hub**: https://hub.docker.com/r/yxhpy520/qcc_plus
 
@@ -393,6 +394,29 @@ docker compose up -d
                 <step>docker push yxhpy520/qcc_plus:vX.Y.Z</step>
                 <step>docker push yxhpy520/qcc_plus:latest</step>
             </manual_steps>
+            <dockerhub_info_update name="更新 Docker Hub 仓库信息">
+                <important>每次发布新版本后必须更新 Docker Hub 仓库的 Short Description 和 Full Description</important>
+                <method_1 name="使用自动化脚本（推荐）">
+                    <prerequisite>需要 Docker Hub Personal Access Token</prerequisite>
+                    <command>./scripts/update-dockerhub-info-v2.sh YOUR_DOCKERHUB_TOKEN</command>
+                    <note>脚本会自动更新 Short Description 和 Full Description</note>
+                    <note>Short Description 限制 100 字节（中文约 33 个字符）</note>
+                    <note>当前使用: "Claude CLI 多租户代理 | 自动切换 | Web管理" (53 字节)</note>
+                </method_1>
+                <method_2 name="手动更新">
+                    <step>访问 https://hub.docker.com/repository/docker/yxhpy520/qcc_plus/general</step>
+                    <step>更新 Short Description: 复制 docker-hub-description-options.md 中推荐的描述</step>
+                    <step>更新 Full Description: 复制 README.dockerhub.md 的完整内容</step>
+                    <step>设置 Category: 选择 "Networking" 或 "Developer Tools"</step>
+                    <step>点击 Update 保存所有更改</step>
+                </method_2>
+                <verification>
+                    <check>访问 https://hub.docker.com/r/yxhpy520/qcc_plus 验证更新</check>
+                    <check>确认 Short Description 正确显示</check>
+                    <check>确认 Full Description Markdown 格式正确</check>
+                    <check>确认 Category 已设置</check>
+                </verification>
+            </dockerhub_info_update>
         </step_4>
 
         <step_5 name="验证发布">
@@ -420,6 +444,9 @@ docker compose up -d
         <note>每次发布后立即更新 CLAUDE.md 记忆文件</note>
         <note>版本信息通过构建时 ldflags 注入，无需手动修改代码</note>
         <note>前端会自动从 /version API 获取版本信息并显示在侧边栏底部</note>
+        <note>⚠️ 每次发布新版本后必须更新 Docker Hub 仓库信息（Short Description + Full Description）</note>
+        <note>Docker Hub Short Description 限制 100 字节，中文字符需特别注意（1 个中文 = 3 字节）</note>
+        <note>使用 scripts/update-dockerhub-info-v2.sh 脚本自动更新，或通过 Web 界面手动更新</note>
     </important_notes>
 
     <version_history description="版本发布历史">
