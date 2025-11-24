@@ -83,10 +83,14 @@ export default function Notifications() {
     setChannelLoading(true)
     try {
       const list = await api.getNotificationChannels()
-      setChannels(list)
-      setSelectedChannelId((prev) => prev || (list[0]?.id ?? ''))
-      setTestChannelId((prev) => prev || (list[0]?.id ?? ''))
+      const safeList = Array.isArray(list) ? list : []
+      setChannels(safeList)
+      const firstId = safeList[0]?.id ?? ''
+      setSelectedChannelId((prev) => prev || firstId)
+      setTestChannelId((prev) => prev || firstId)
     } catch (err) {
+      console.error('Failed to load notification channels:', err)
+      setChannels([])
       showToast('加载渠道失败', 'error')
     } finally {
       setChannelLoading(false)
@@ -97,8 +101,10 @@ export default function Notifications() {
     setEventLoading(true)
     try {
       const list = await api.getEventTypes()
-      setEventTypes(list)
+      setEventTypes(Array.isArray(list) ? list : [])
     } catch (err) {
+      console.error('Failed to load event types:', err)
+      setEventTypes([])
       showToast('加载事件类型失败', 'error')
     } finally {
       setEventLoading(false)
@@ -110,9 +116,13 @@ export default function Notifications() {
     setEventLoading(true)
     try {
       const list = await api.getNotificationSubscriptions(channelId)
-      setSubscriptions(list)
-      setSelectedEvents(new Set(list.filter((s) => s.enabled).map((s) => s.event_type)))
+      const safeList = Array.isArray(list) ? list : []
+      setSubscriptions(safeList)
+      setSelectedEvents(new Set(safeList.filter((s) => s.enabled).map((s) => s.event_type)))
     } catch (err) {
+      console.error('Failed to load notification subscriptions:', err)
+      setSubscriptions([])
+      setSelectedEvents(new Set())
       showToast('加载订阅失败', 'error')
     } finally {
       setEventLoading(false)

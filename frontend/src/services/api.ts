@@ -215,7 +215,13 @@ async function getVersion(): Promise<VersionInfo> {
 }
 
 async function getNotificationChannels(): Promise<NotificationChannel[]> {
-  return request<NotificationChannel[]>('/api/notification/channels')
+  try {
+    const result = await request<NotificationChannel[]>('/api/notification/channels')
+    return Array.isArray(result) ? result : []
+  } catch (err) {
+    console.error('Failed to fetch notification channels:', err)
+    return []
+  }
 }
 
 async function createNotificationChannel(data: CreateChannelRequest): Promise<NotificationChannel> {
@@ -244,7 +250,13 @@ async function getNotificationSubscriptions(channelId?: string): Promise<Notific
   const url = channelId
     ? `/api/notification/subscriptions?channel_id=${encodeURIComponent(channelId)}`
     : '/api/notification/subscriptions'
-  return request<NotificationSubscription[]>(url)
+  try {
+    const result = await request<NotificationSubscription[]>(url)
+    return Array.isArray(result) ? result : []
+  } catch (err) {
+    console.error('Failed to fetch subscriptions:', err)
+    return []
+  }
 }
 
 async function createNotificationSubscriptions(data: CreateSubscriptionsRequest): Promise<void> {
@@ -270,7 +282,13 @@ async function deleteNotificationSubscription(id: string): Promise<void> {
 }
 
 async function getEventTypes(): Promise<EventType[]> {
-  return request<EventType[]>('/api/notification/event-types')
+  try {
+    const result = await request<EventType[]>('/api/notification/event-types')
+    return Array.isArray(result) ? result : []
+  } catch (err) {
+    console.error('Failed to fetch event types:', err)
+    return []
+  }
 }
 
 async function testNotification(data: TestNotificationRequest): Promise<void> {
