@@ -25,7 +25,11 @@ export default function Layout({ children }: LayoutProps) {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `layout-link ${isActive ? 'active' : ''}`
 
-  const versionLabel = version ? `v${version.version}` : versionLoading ? 'v...' : 'v-'
+  const versionLabel = version
+    ? (version.version.startsWith('v') ? version.version : `v${version.version}`)
+    : versionLoading
+      ? 'v...'
+      : 'v-'
   const versionTitle = version
     ? `commit: ${version.git_commit}\nbuild: ${version.build_date}\ngo: ${version.go_version}`
     : versionError
