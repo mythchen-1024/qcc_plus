@@ -10,6 +10,9 @@ import type {
   CreateSubscriptionsRequest,
   EventType,
   TestNotificationRequest,
+  MonitorDashboard,
+  MonitorShare,
+  CreateMonitorShareRequest,
 } from '../types'
 
 const defaultHeaders = { 'Content-Type': 'application/json' }
@@ -161,6 +164,63 @@ async function toggleNode(id: string, disabled: boolean): Promise<void> {
     headers: defaultHeaders,
     body: JSON.stringify({ id }),
   })
+}
+
+async function getMonitorDashboard(accountId?: string): Promise<MonitorDashboard> {
+  const url = withAccount('/api/monitor/dashboard', accountId)
+  return request<MonitorDashboard>(url)
+}
+
+type CreateMonitorShareResponse = {
+  id: string
+  token: string
+  share_url?: string
+  expire_at?: string | null
+  created_at: string
+  account_id?: string
+  created_by?: string
+}
+
+async function createMonitorShare(payload: CreateMonitorShareRequest): Promise<MonitorShare> {
+  const res = await request<CreateMonitorShareResponse>('/api/monitor/shares', {
+    method: 'POST',
+    headers: defaultHeaders,
+    body: JSON.stringify(payload),
+  })
+  return {
+    id: res.id,
+    token: res.token,
+    share_url: res.share_url,
+    expire_at: res.expire_at ?? undefined,
+    created_at: res.created_at,
+    account_id: res.account_id || payload.account_id || '',
+    created_by: res.created_by || '',
+    revoked: false,
+    revoked_at: undefined,
+  }
+}
+
+async function getMonitorShares(
+  accountId?: string,
+  limit = 20,
+  offset = 0,
+): Promise<{ shares: MonitorShare[]; total?: number }> {
+  const params = new URLSearchParams()
+  if (accountId) params.set('account_id', accountId)
+  params.set('limit', String(limit))
+  params.set('offset', String(offset))
+  const qs = params.toString()
+  const url = qs ? `/api/monitor/shares?${qs}` : '/api/monitor/shares'
+  const data = await request<{ shares: MonitorShare[]; total?: number }>(url)
+  return { shares: data.shares || [], total: data.total }
+}
+
+async function revokeMonitorShare(id: string): Promise<void> {
+  await request(`/api/monitor/shares/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+async function getSharedMonitor(token: string): Promise<MonitorDashboard> {
+  return request<MonitorDashboard>(`/api/monitor/share/${encodeURIComponent(token)}`)
 }
 
 async function getConfig(accountId?: string): Promise<Config> {
@@ -325,6 +385,11 @@ export default {
   deleteNode,
   activateNode,
   toggleNode,
+  getMonitorDashboard,
+  createMonitorShare,
+  getMonitorShares,
+  revokeMonitorShare,
+  getSharedMonitor,
   getConfig,
   updateConfig,
   getTunnel,

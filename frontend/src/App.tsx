@@ -5,10 +5,13 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Accounts from './pages/Accounts'
 import Nodes from './pages/Nodes'
+import Monitor from './pages/Monitor'
+import MonitorShares from './pages/MonitorShares'
 import Settings from './pages/Settings'
 import TunnelSettings from './pages/TunnelSettings'
 import Notifications from './pages/Notifications'
 import ChangelogPage from './pages/ChangelogPage'
+import SharedMonitor from './pages/SharedMonitor'
 import { useAuth } from './hooks/useAuth'
 
 function ProtectedRoute({ children, adminOnly = false }: { children: ReactElement; adminOnly?: boolean }) {
@@ -69,6 +72,26 @@ export default function App() {
           }
         />
         <Route
+          path="/admin/monitor"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Monitor />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/monitor-shares"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <MonitorShares />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/settings"
           element={
             <ProtectedRoute>
@@ -108,6 +131,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/monitor/share/:token" element={<SharedMonitor />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

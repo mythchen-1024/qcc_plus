@@ -45,11 +45,17 @@ export default function Layout({ children }: LayoutProps) {
           <NavLink to="/admin/dashboard" className={linkClass}>
             仪表盘
           </NavLink>
+          <NavLink to="/admin/monitor" className={linkClass}>
+            监控大屏
+          </NavLink>
           <NavLink to="/admin/accounts" className={linkClass}>
             账号管理
           </NavLink>
           <NavLink to="/admin/nodes" className={linkClass}>
             节点管理
+          </NavLink>
+          <NavLink to="/admin/monitor-shares" className={linkClass}>
+            分享链接
           </NavLink>
           <NavLink to="/admin/settings" className={linkClass}>
             系统配置

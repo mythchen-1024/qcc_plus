@@ -1,0 +1,54 @@
+.shared-monitor-page {
+  padding: 40px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: var(--text-primary);
+}
+
+.shared-monitor-page header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.shared-monitor-page h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: 0.5px;
+}
+
+.readonly-notice {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.shared-monitor-loading,
+.shared-monitor-error {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.shared-monitor-error h2 {
+  color: #fca5a5;
+  margin: 0;
+}
+
+.nodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}

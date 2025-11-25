@@ -99,3 +99,67 @@ export interface TestNotificationRequest {
   title: string;
   content: string;
 }
+
+export type ShareExpireIn = '1h' | '24h' | '168h' | 'permanent';
+
+export interface TrendPoint {
+  timestamp: string;
+  success_rate: number;
+  avg_time: number;
+}
+
+export interface MonitorNode {
+  id: string;
+  name: string;
+  url: string;
+  status: 'online' | 'offline' | 'checking';
+  weight: number;
+  is_active: boolean;
+  disabled: boolean;
+  success_rate: number;
+  avg_response_time: number;
+  last_check_at?: string | null;
+  last_error?: string;
+  last_ping_ms?: number;
+  trend_24h: TrendPoint[];
+  total_requests?: number;
+  failed_requests?: number;
+}
+
+export interface MonitorDashboard {
+  account_id: string;
+  account_name: string;
+  nodes: MonitorNode[];
+  updated_at: string;
+}
+
+export interface MonitorShare {
+  id: string;
+  account_id?: string;
+  token: string;
+  expire_at?: string | null;
+  created_by?: string;
+  created_at: string;
+  revoked?: boolean;
+  revoked_at?: string | null;
+  share_url?: string;
+}
+
+export interface CreateMonitorShareRequest {
+  account_id?: string;
+  expire_in: ShareExpireIn;
+}
+
+export interface WSMessage {
+  type: 'node_status' | 'node_metrics';
+  payload: {
+    node_id: string;
+    node_name: string;
+    status?: string;
+    error?: string;
+    success_rate?: number;
+    avg_response_time?: number;
+    last_ping_ms?: number;
+    timestamp: string;
+  };
+}
