@@ -184,6 +184,13 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 	var (
 		rec           store.NodeRecord
 		shouldPersist bool
+
+		metricsSnapshot metrics
+		nodeName        string
+		nodeID          string
+		nodeFailed      bool
+		nodeDisabled    bool
+		hasNode         bool
 	)
 
 	p.mu.Lock()
@@ -213,6 +220,13 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 				shouldPersist = true
 			}
 		}
+
+		hasNode = true
+		nodeName = n.Name
+		nodeID = n.ID
+		nodeFailed = n.Failed
+		nodeDisabled = n.Disabled
+		metricsSnapshot = n.Metrics
 	}
 	p.mu.Unlock()
 	if shouldPersist {
@@ -239,6 +253,33 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 			})
 		}
 		p.maybePromoteRecovered(n)
+	}
+
+	if p.wsHub != nil && acc != nil && hasNode {
+		successCount := metricsSnapshot.Requests - metricsSnapshot.FailCount
+		if successCount < 0 {
+			successCount = 0
+		}
+		successRate := calculateSuccessRate(successCount, metricsSnapshot.FailCount)
+		totalDuration := metricsSnapshot.FirstByteDur + metricsSnapshot.StreamDur
+		avgResponseTime := calculateAvgResponseTime(totalDuration.Milliseconds(), metricsSnapshot.Requests)
+		ts := metricsSnapshot.LastHealthCheckAt
+		if ts.IsZero() {
+			ts = time.Now()
+		}
+		status := "offline"
+		if !nodeFailed && !nodeDisabled {
+			status = "online"
+		}
+		p.wsHub.Broadcast(acc.ID, "node_metrics", map[string]interface{}{
+			"node_id":           nodeID,
+			"node_name":         nodeName,
+			"status":            status,
+			"success_rate":      successRate,
+			"avg_response_time": avgResponseTime,
+			"last_ping_ms":      metricsSnapshot.LastPingMS,
+			"timestamp":         ts.UTC().Format(time.RFC3339),
+		})
 	}
 }
 
