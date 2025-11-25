@@ -345,7 +345,6 @@ export default function Monitor({ shared = false }: MonitorProps) {
 					node={node}
 					historyRefreshKey={historyRefreshKey}
 					healthEvent={healthEvents[node.id]}
-					historyDisabled={shared}
 				/>
             ))}
           </div>
