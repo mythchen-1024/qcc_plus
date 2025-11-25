@@ -180,10 +180,12 @@ async function getHealthHistory(
   nodeId: string,
   from?: string,
   to?: string,
+  shareToken?: string,
 ): Promise<HealthHistory> {
   const params = new URLSearchParams()
   if (from) params.set('from', from)
   if (to) params.set('to', to)
+  if (shareToken) params.set('share_token', shareToken)
   const qs = params.toString()
   const url = qs
     ? `/api/nodes/${encodeURIComponent(nodeId)}/health-history?${qs}`

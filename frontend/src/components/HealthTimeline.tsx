@@ -16,7 +16,7 @@ interface HealthTimelineProps {
 	nodeId: string
 	refreshKey?: number
 	latest?: HealthCheckRecord | null
-	disabled?: boolean
+	shareToken?: string
 }
 
 function normalizeRecord(nodeId: string, rec: HealthCheckRecord): HealthCheckRecord {
@@ -30,7 +30,7 @@ function normalizeRecord(nodeId: string, rec: HealthCheckRecord): HealthCheckRec
 	}
 }
 
-export default function HealthTimeline({ nodeId, refreshKey = 0, latest, disabled = false }: HealthTimelineProps) {
+export default function HealthTimeline({ nodeId, refreshKey = 0, latest, shareToken }: HealthTimelineProps) {
 	const [range, setRange] = useState<RangeKey>('24h')
 	const [history, setHistory] = useState<HealthHistory | null>(null)
 	const [loading, setLoading] = useState(false)
@@ -42,26 +42,20 @@ export default function HealthTimeline({ nodeId, refreshKey = 0, latest, disable
 	} | null>(null)
 
 	const fetchHistory = useCallback(async () => {
-		if (disabled) {
-			setHistory(null)
-			setLoading(false)
-			return
-		}
-
 		setLoading(true)
 		setError(null)
 		const now = new Date()
 		const to = now.toISOString()
 		const from = new Date(now.getTime() - RANGE_WINDOWS[range]).toISOString()
 		try {
-			const res = await api.getHealthHistory(nodeId, from, to)
+			const res = await api.getHealthHistory(nodeId, from, to, shareToken)
 			setHistory(res)
 		} catch (err) {
 			setError((err as Error).message || '加载失败')
 		} finally {
 			setLoading(false)
 		}
-	}, [disabled, nodeId, range])
+	}, [nodeId, range, shareToken])
 
 	useEffect(() => {
 		fetchHistory()
@@ -69,7 +63,6 @@ export default function HealthTimeline({ nodeId, refreshKey = 0, latest, disable
 	}, [fetchHistory, refreshKey])
 
 	useEffect(() => {
-		if (disabled) return
 		if (!latest || latest.node_id !== nodeId) return
 		setHistory((prev) => {
 			const normalized = normalizeRecord(nodeId, latest)
@@ -102,7 +95,7 @@ export default function HealthTimeline({ nodeId, refreshKey = 0, latest, disable
 				checks: filtered,
 			}
 		})
-	}, [disabled, latest, nodeId, range])
+	}, [latest, nodeId, range])
 
 	const stats = useMemo(() => {
 		const checks = history?.checks || []
@@ -133,20 +126,6 @@ export default function HealthTimeline({ nodeId, refreshKey = 0, latest, disable
 	}
 
 	const checks = history?.checks || []
-
-	if (disabled) {
-		return (
-			<div className="health-timeline">
-				<div className="health-timeline__header">
-					<div className="health-timeline__title">健康检查历史</div>
-					<div className="health-timeline__actions">
-						<span className="chip">共享模式</span>
-					</div>
-				</div>
-				<div className="health-empty">共享/未登录视图暂不支持查看历史记录</div>
-			</div>
-		)
-	}
 
 	return (
 		<div className="health-timeline">

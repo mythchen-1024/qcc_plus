@@ -7,7 +7,7 @@ interface NodeCardProps {
 	node: MonitorNode
 	historyRefreshKey: number
 	healthEvent?: HealthCheckRecord | null
-	historyDisabled?: boolean
+	shareToken?: string
 }
 
 const statusLabel: Record<string, string> = {
@@ -16,7 +16,7 @@ const statusLabel: Record<string, string> = {
   disabled: '停用',
 }
 
-export default function NodeCard({ node, historyRefreshKey, healthEvent, historyDisabled }: NodeCardProps) {
+export default function NodeCard({ node, historyRefreshKey, healthEvent, shareToken }: NodeCardProps) {
 	const resolvedStatus = node.disabled ? 'disabled' : node.status || 'offline'
 	const successRate = Number.isFinite(node.success_rate) ? Number(node.success_rate) : 0
 	const avgTime = Number.isFinite(node.avg_response_time) ? Number(node.avg_response_time) : 0
@@ -51,7 +51,7 @@ export default function NodeCard({ node, historyRefreshKey, healthEvent, history
 		nodeId={node.id}
 		refreshKey={historyRefreshKey}
 		latest={healthEvent}
-		disabled={historyDisabled}
+		shareToken={shareToken}
 	/>
 
 	<div className="node-card__footer">

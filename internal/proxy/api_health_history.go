@@ -28,6 +28,7 @@ func (p *Server) handleNodeAPIRoutes(w http.ResponseWriter, r *http.Request) {
 // - to: RFC3339（默认当前时间）
 // - limit: 默认 300
 // - offset: 默认 0
+// - share_token: 分享 token（可选，用于未登录访问）
 func (p *Server) handleGetHealthHistory(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -44,20 +45,37 @@ func (p *Server) handleGetHealthHistory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	caller := accountFromCtx(r)
-	if caller == nil {
-		respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
-		return
-	}
-
 	node := p.getNode(nodeID)
 	if node == nil {
 		respondJSON(w, http.StatusNotFound, map[string]string{"error": "node not found"})
 		return
 	}
-	if !isAdmin(r.Context()) && node.AccountID != caller.ID {
-		respondJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
-		return
+
+	// 检查认证：优先使用 session，否则检查 share_token
+	caller := accountFromCtx(r)
+	if caller == nil {
+		// 尝试通过 share_token 认证
+		shareToken := r.URL.Query().Get("share_token")
+		if shareToken == "" {
+			respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		share, err := p.store.GetMonitorShareByToken(r.Context(), shareToken)
+		if err != nil || share == nil {
+			respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid share token"})
+			return
+		}
+		// 验证节点属于分享的账号
+		if node.AccountID != share.AccountID {
+			respondJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
+			return
+		}
+	} else {
+		// 已登录用户：检查权限
+		if !isAdmin(r.Context()) && node.AccountID != caller.ID {
+			respondJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
+			return
+		}
 	}
 
 	to, err := parseTime(r.URL.Query().Get("to"))

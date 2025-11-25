@@ -119,6 +119,7 @@ export default function SharedMonitor() {
             node={node}
             historyRefreshKey={historyRefreshKey}
             healthEvent={healthEvents[node.id]}
+            shareToken={token}
           />
         ))}
       </div>
