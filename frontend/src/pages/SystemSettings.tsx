@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Card from '../components/Card'
 import { useSettings } from '../contexts/SettingsContext'
 import './SystemSettings.css'
 
@@ -28,43 +29,55 @@ export default function SystemSettings() {
 
   const filteredSettings = Object.values(settings).filter(s => s.category === activeCategory)
 
-  if (loading) return <div className="settings-loading">加载中...</div>
-
   return (
-    <div className="system-settings">
-      <div className="settings-header">
+    <div className="system-settings-page">
+      <div className="system-settings-header">
         <h1>系统设置</h1>
-        <button onClick={refresh}>刷新</button>
+        <p className="sub">配置系统参数，包括监控、健康检查、性能等设置。</p>
       </div>
 
-      <div className="settings-tabs">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.key}
-            className={`tab ${activeCategory === cat.key ? 'active' : ''}`}
-            onClick={() => setActiveCategory(cat.key)}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="settings-list">
-        {filteredSettings.map(setting => (
-          <div key={setting.key} className="setting-item">
-            <div className="setting-info">
-              <div className="setting-key">{setting.key}</div>
-              <div className="setting-desc">{setting.description || '-'}</div>
-            </div>
-            <div className="setting-control">
-              {renderControl(setting, handleChange, saving === setting.key)}
-            </div>
+      <Card className="settings-card tabs-card">
+        <div className="settings-toolbar">
+          <div className="tab-group">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.key}
+                type="button"
+                className={`tab-btn ${activeCategory === cat.key ? 'active' : ''}`}
+                onClick={() => setActiveCategory(cat.key)}
+              >
+                {cat.label}
+              </button>
+            ))}
           </div>
-        ))}
-        {filteredSettings.length === 0 && (
-          <div className="no-settings">该分类暂无配置项</div>
-        )}
-      </div>
+          <div className="spacer" />
+          <button className="btn ghost" type="button" onClick={refresh} disabled={loading}>
+            刷新
+          </button>
+        </div>
+      </Card>
+
+      <Card className="settings-card">
+        <div className="settings-list">
+          {loading ? (
+            <div className="settings-loading">加载中...</div>
+          ) : filteredSettings.length === 0 ? (
+            <div className="no-settings">该分类暂无配置项</div>
+          ) : (
+            filteredSettings.map(setting => (
+              <div key={setting.key} className={`setting-item ${saving === setting.key ? 'saving' : ''}`}>
+                <div className="setting-info">
+                  <div className="setting-key">{setting.key}</div>
+                  <div className="setting-desc">{setting.description || '-'}</div>
+                </div>
+                <div className="setting-control">
+                  {renderControl(setting, handleChange, saving === setting.key)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
     </div>
   )
 }
@@ -98,10 +111,11 @@ function renderControl(setting: any, onChange: (key: string, value: any) => void
           disabled={saving}
         />
       )
-    case 'object':
+    case 'object': {
+      const stringified = value === undefined ? '' : JSON.stringify(value, null, 2)
       return (
         <textarea
-          value={JSON.stringify(value, null, 2)}
+          value={stringified}
           onChange={e => {
             try {
               onChange(key, JSON.parse(e.target.value))
@@ -112,6 +126,7 @@ function renderControl(setting: any, onChange: (key: string, value: any) => void
           disabled={saving}
         />
       )
+    }
     default:
       return (
         <input
