@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"qcc_plus/internal/store"
+	"qcc_plus/internal/timeutil"
 )
 
 type CreateMonitorShareRequest struct {
@@ -99,7 +100,7 @@ func (p *Server) handleCreateMonitorShare(w http.ResponseWriter, r *http.Request
 
 	expireStr := (*string)(nil)
 	if !expireAt.IsZero() {
-		s := expireAt.UTC().Format(time.RFC3339)
+		s := timeutil.FormatBeijingTime(expireAt)
 		expireStr = &s
 	}
 	shareURL := buildShareURL(r, token)
@@ -108,7 +109,7 @@ func (p *Server) handleCreateMonitorShare(w http.ResponseWriter, r *http.Request
 		Token:     token,
 		ShareURL:  shareURL,
 		ExpireAt:  expireStr,
-		CreatedAt: rec.CreatedAt.Format(time.RFC3339),
+		CreatedAt: timeutil.FormatBeijingTime(rec.CreatedAt),
 	}
 	writeJSON(w, http.StatusCreated, resp)
 }
@@ -175,12 +176,12 @@ func (p *Server) handleListMonitorShares(w http.ResponseWriter, r *http.Request)
 	for _, rec := range records {
 		expireStr := (*string)(nil)
 		if !rec.ExpireAt.IsZero() {
-			s := rec.ExpireAt.UTC().Format(time.RFC3339)
+			s := timeutil.FormatBeijingTime(rec.ExpireAt)
 			expireStr = &s
 		}
 		var revokedAt *string
 		if rec.RevokedAt != nil {
-			s := rec.RevokedAt.UTC().Format(time.RFC3339)
+			s := timeutil.FormatBeijingTime(*rec.RevokedAt)
 			revokedAt = &s
 		}
 		resp = append(resp, map[string]interface{}{
@@ -189,7 +190,7 @@ func (p *Server) handleListMonitorShares(w http.ResponseWriter, r *http.Request)
 			"token":      rec.Token,
 			"share_url":  buildShareURL(r, rec.Token),
 			"expire_at":  expireStr,
-			"created_at": rec.CreatedAt.UTC().Format(time.RFC3339),
+			"created_at": timeutil.FormatBeijingTime(rec.CreatedAt),
 			"created_by": rec.CreatedBy,
 			"revoked":    rec.Revoked,
 			"revoked_at": revokedAt,
