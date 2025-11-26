@@ -192,6 +192,8 @@ export default function Dashboard() {
     return list
   }, [nodes])
 
+  const displayedAlerts = alerts.slice(0, 3)
+
   const throughputChart = useMemo(() => {
     const throughputColor = (bps: number) => {
       if (bps >= 50000) return chartColors.success
@@ -395,7 +397,7 @@ export default function Dashboard() {
       {alerts.length > 0 && (
         <Card title="告警" extra={<span className="pill-small" style={{ background: '#fee2e2', color: '#b91c1c' }}>{alerts.length}</span>}>
           <div className="alert-list">
-            {alerts.map((alert, idx) => (
+            {displayedAlerts.map((alert, idx) => (
               <div className="alert-card" key={idx}>
                 <div className="alert-title">
                   <strong>{alert.node}</strong>: {alert.message}

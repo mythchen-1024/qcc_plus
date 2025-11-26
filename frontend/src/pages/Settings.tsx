@@ -97,7 +97,7 @@ export default function Settings() {
         </div>
         <form className="settings-form" onSubmit={handleSubmit}>
           <label>
-            重试次数
+            <span className="label-title">重试次数</span>
             <input
               type="number"
               name="retries"
@@ -109,7 +109,7 @@ export default function Settings() {
             />
           </label>
           <label>
-            失败阈值
+            <span className="label-title">失败阈值</span>
             <input
               type="number"
               name="fail"
@@ -121,7 +121,7 @@ export default function Settings() {
             />
           </label>
           <label>
-            健康检查间隔（秒）
+            <span className="label-title">健康检查间隔（秒）</span>
             <input
               type="number"
               name="health"

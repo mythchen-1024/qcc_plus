@@ -17,8 +17,9 @@
 .tunnel-status-line {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	margin-bottom: 12px;
+	gap: 8px;
+	margin-bottom: 10px;
+	flex-wrap: wrap;
 }
 
 .status-badge {
@@ -60,8 +61,8 @@
 
 .tunnel-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-	gap: 14px;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 10px;
 }
 
 .tunnel-grid label {
@@ -73,10 +74,11 @@
 
 .tunnel-grid input[type='text'],
 .tunnel-grid input[type='password'] {
-	padding: 10px 12px;
+	padding: 8px 10px;
 	border-radius: 8px;
 	border: 1px solid #d6d6dd;
-	font-size: 14px;
+	font-size: 13px;
+	height: 36px;
 }
 
 .zone-field {
@@ -102,8 +104,9 @@
 }
 
 .tunnel-actions {
-	margin-top: 14px;
+	margin-top: 12px;
 	display: flex;
-	gap: 12px;
+	gap: 10px;
 	justify-content: flex-end;
+	flex-wrap: wrap;
 }

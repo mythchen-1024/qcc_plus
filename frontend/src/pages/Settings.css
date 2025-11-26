@@ -16,21 +16,21 @@
 }
 
 .settings-header {
-  margin-bottom: var(--spacing-6);
+  margin-bottom: 12px;
   animation: fadeIn 0.6s ease-out;
 }
 
 .settings-header h1 {
   font-size: var(--font-size-page-title);
   font-weight: var(--font-weight-semibold);
-  margin: 0 0 var(--spacing-3) 0;
+  margin: 0 0 4px 0;
   color: var(--color-text-primary);
 }
 
 .settings-header .sub {
   color: var(--color-text-secondary);
   font-size: var(--font-size-subtitle);
-  margin: 0;
+  margin: 0 0 8px;
   font-weight: 300;
 }
 
@@ -38,32 +38,39 @@
 .settings-form {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-3);
-  align-items: flex-end;
+  gap: 10px;
+  align-items: center;
   animation: fadeIn 0.8s ease-out 0.1s both;
 }
 
 .settings-form label {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   font-size: var(--font-size-small);
   color: var(--color-text-secondary);
   font-weight: 500;
   flex: 1;
-  min-width: 200px;
+  min-width: 240px;
+}
+
+.settings-form .label-title {
+  min-width: 120px;
+  color: var(--color-text-primary);
+  font-weight: 600;
 }
 
 .settings-form input {
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border-default);
   color: var(--color-text-primary);
-  padding: var(--input-padding-y) var(--input-padding-x);
-  height: var(--input-height);
+  padding: 8px 10px;
+  height: 36px;
   border-radius: var(--radius-xl);
   outline: none;
   font-size: var(--font-size-body);
-  width: 100%;
+  width: 140px;
   box-sizing: border-box;
   transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -116,9 +123,9 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: var(--spacing-4);
+  margin-bottom: 10px;
 }
 
 .toolbar label {

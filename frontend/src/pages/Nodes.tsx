@@ -390,7 +390,7 @@ export default function Nodes() {
             ⋮⋮
           </button>
         </td>
-        <td>{node.name || '未命名'}</td>
+        <td className="node-name-cell">{node.name || '未命名'}</td>
         <td>
           <div className="url-cell" title={node.base_url || '-'}>
             {node.base_url || '-'}

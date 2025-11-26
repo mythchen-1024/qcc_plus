@@ -32,10 +32,10 @@ body:has(.login-page) #root {
 .login-container {
   position: relative;
   z-index: 1;
-  width: auto;
-  min-width: 420px;
-  max-width: 520px;
-  padding: 48px;
+  width: 360px;
+  max-width: 400px;
+  min-width: 320px;
+  padding: 32px 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -43,7 +43,7 @@ body:has(.login-page) #root {
 
   background: var(--color-bg-card);
   border: 1px solid var(--color-border-default);
-  border-radius: 24px;
+  border-radius: 20px;
   box-shadow: var(--shadow-lg);
 
   /* Animation */
@@ -238,9 +238,9 @@ body:has(.login-page) #root {
 /* PC 大屏幕 (>1200px) */
 @media (min-width: 1200px) {
   .login-container {
-    min-width: 480px;
-    max-width: 580px;
-    padding: 56px;
+    width: 380px;
+    max-width: 420px;
+    padding: 36px 30px;
   }
 
   .login-title h1 {
@@ -256,9 +256,9 @@ body:has(.login-page) #root {
 /* 平板和小 PC (768px - 1199px) */
 @media (min-width: 768px) and (max-width: 1199px) {
   .login-container {
-    min-width: 420px;
-    max-width: 520px;
-    padding: 48px;
+    width: 360px;
+    max-width: 400px;
+    padding: 32px 28px;
   }
 }
 
@@ -272,7 +272,7 @@ body:has(.login-page) #root {
     min-width: auto;
     max-width: 100%;
     width: 100%;
-    padding: 32px 24px;
+    padding: 28px 22px;
     border-radius: 20px;
   }
 
