@@ -14,6 +14,7 @@ import Toast from '../components/Toast'
 import api from '../services/api'
 import type { Account, Node } from '../types'
 import { formatBeijingTime } from '../utils/date'
+import { useChartColors } from '../hooks/useChartColors'
 import './Dashboard.css'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend)
@@ -61,12 +62,6 @@ function formatBps(bps: number) {
   return `${bps.toFixed(0)} B/s`
 }
 
-function throughputColor(bps: number) {
-  if (bps >= 50000) return '#16a34a'
-  if (bps >= 10000) return '#f59e0b'
-  return '#dc2626'
-}
-
 function nodeHealthTone(node: Node) {
   if (node.disabled) return 'off'
   if (node.failed || Number(node.fail_streak || 0) > 3) return 'fail'
@@ -89,6 +84,7 @@ export default function Dashboard() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const chartColors = useChartColors()
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type })
@@ -197,6 +193,12 @@ export default function Dashboard() {
   }, [nodes])
 
   const throughputChart = useMemo(() => {
+    const throughputColor = (bps: number) => {
+      if (bps >= 50000) return chartColors.success
+      if (bps >= 10000) return chartColors.warning
+      return chartColors.danger
+    }
+
     const data = nodes
       .map((n) => ({ label: n.name || '未命名', value: bytesPerSecond(n) }))
       .sort((a, b) => b.value - a.value)
@@ -217,8 +219,8 @@ export default function Dashboard() {
       options: {
         indexAxis: 'y' as const,
         scales: {
-          x: { grid: { color: '#e2e8f0' }, title: { display: true, text: '字节/秒' } },
-          y: { ticks: { color: '#334155' } },
+          x: { grid: { color: chartColors.gridColor }, title: { display: true, text: '字节/秒' } },
+          y: { ticks: { color: chartColors.textSecondary } },
         },
         plugins: {
           legend: { display: false },
@@ -233,7 +235,7 @@ export default function Dashboard() {
         maintainAspectRatio: false,
       },
     }
-  }, [nodes])
+  }, [nodes, chartColors])
 
   const requestChart = useMemo(() => {
     const sorted = nodes.slice().sort((a, b) => Number(b.requests || 0) - Number(a.requests || 0))
@@ -250,7 +252,7 @@ export default function Dashboard() {
       dataArr.push(0)
       labelsArr.push('暂无数据')
     }
-    const palette = ['#2563eb', '#22c55e', '#f59e0b', '#a855f7', '#06b6d4', '#94a3b8']
+    const palette = chartColors.palette
     const colors = labelsArr.map((_, i) => palette[i % palette.length])
     return {
       data: {
@@ -281,7 +283,7 @@ export default function Dashboard() {
         maintainAspectRatio: false,
       },
     }
-  }, [nodes])
+  }, [nodes, chartColors])
 
   const handleActivate = async (id: string) => {
     try {

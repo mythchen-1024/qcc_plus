@@ -11,6 +11,7 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import type { TrendPoint } from '../types'
+import { useChartColors } from '../hooks/useChartColors'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
@@ -19,6 +20,7 @@ interface TrendChartProps {
 }
 
 export default function TrendChart({ data }: TrendChartProps) {
+  const colors = useChartColors()
   const hasData = Array.isArray(data) && data.length > 0
   const labels = hasData
     ? data.map((p) => new Date(p.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
@@ -32,8 +34,8 @@ export default function TrendChart({ data }: TrendChartProps) {
     {
       label: '成功率',
       data: successSeries,
-      borderColor: '#22c55e',
-      backgroundColor: 'rgba(34, 197, 94, 0.12)',
+      borderColor: colors.success,
+      backgroundColor: colors.successBg,
       tension: 0.35,
       fill: true,
       pointRadius: 2.5,
@@ -46,8 +48,8 @@ export default function TrendChart({ data }: TrendChartProps) {
     datasets.push({
       label: '响应时间(ms)',
       data: timeSeries,
-      borderColor: '#38bdf8',
-      backgroundColor: 'rgba(56, 189, 248, 0.12)',
+      borderColor: colors.info,
+      backgroundColor: colors.infoBg,
       tension: 0.35,
       fill: false,
       pointRadius: 2,
@@ -65,7 +67,7 @@ export default function TrendChart({ data }: TrendChartProps) {
       legend: {
         display: true,
         labels: {
-          color: 'rgba(255, 255, 255, 0.75)',
+          color: colors.textSecondary,
           usePointStyle: true,
         },
       },
@@ -84,21 +86,21 @@ export default function TrendChart({ data }: TrendChartProps) {
     scales: {
       x: {
         grid: { display: false },
-        ticks: { color: 'rgba(255, 255, 255, 0.55)', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 },
+        ticks: { color: colors.textMuted, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 },
       },
       y: {
         min: 0,
         max: 100,
         ticks: {
-          color: 'rgba(255, 255, 255, 0.65)',
+          color: colors.textSecondary,
           callback: (value) => `${value}%`,
         },
-        grid: { color: 'rgba(255, 255, 255, 0.08)' },
+        grid: { color: colors.gridColor },
       },
       y1: {
         display: hasTimeSeries,
         position: 'right',
-        ticks: { color: 'rgba(255, 255, 255, 0.65)' },
+        ticks: { color: colors.textSecondary },
         grid: { drawOnChartArea: false },
       },
     },
