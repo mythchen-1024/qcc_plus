@@ -277,6 +277,8 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 			"node_id":           nodeID,
 			"node_name":         nodeName,
 			"status":            status,
+			"total_requests":    metricsSnapshot.Requests,
+			"failed_requests":   metricsSnapshot.FailCount,
 			"success_rate":      successRate,
 			"avg_response_time": avgResponseTime,
 			"last_ping_ms":      metricsSnapshot.LastPingMS,

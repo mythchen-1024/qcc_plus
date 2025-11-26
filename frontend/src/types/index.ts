@@ -177,6 +177,8 @@ export type WSMessage =
         error?: string;
         success_rate?: number;
         avg_response_time?: number;
+        total_requests?: number;
+        failed_requests?: number;
         last_ping_ms?: number;
         timestamp: string;
       };

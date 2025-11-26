@@ -156,6 +156,8 @@ export default function Monitor({ shared = false }: MonitorProps) {
         last_error: payload.error ?? prevNode.last_error,
         success_rate: payload.success_rate ?? prevNode.success_rate,
         avg_response_time: payload.avg_response_time ?? prevNode.avg_response_time,
+        total_requests: payload.total_requests ?? prevNode.total_requests,
+        failed_requests: payload.failed_requests ?? prevNode.failed_requests,
         last_ping_ms: payload.last_ping_ms ?? prevNode.last_ping_ms,
         last_check_at: payload.timestamp || prevNode.last_check_at,
       }

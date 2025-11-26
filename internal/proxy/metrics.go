@@ -42,8 +42,18 @@ func (mw *metricsWriter) Write(b []byte) (int, error) {
 func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter, u *usage) {
 	end := time.Now()
 	var (
-		nodeRec    store.NodeRecord
-		metricsRec *store.MetricsRecord
+		nodeRec      store.NodeRecord
+		metricsRec   *store.MetricsRecord
+		nodeName     string
+		nodeIDCopy   string
+		nodeFailed   bool
+		nodeDisabled bool
+		requests     int64
+		failCount    int64
+		firstByteDur time.Duration
+		streamDur    time.Duration
+		lastPingMS   int64
+		accountID    string
 	)
 
 	p.mu.Lock()
@@ -53,7 +63,7 @@ func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter
 		return
 	}
 	acc := p.nodeAccount[nodeID]
-	accountID := node.AccountID
+	accountID = node.AccountID
 	if acc != nil && acc.ID != "" {
 		accountID = acc.ID
 	}
@@ -86,6 +96,15 @@ func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter
 		nodeRec = toRecord(node)
 		metricsRec = buildMetricsRecord(accountID, nodeID, start, end, mw, u)
 	}
+	nodeName = node.Name
+	nodeIDCopy = node.ID
+	nodeFailed = node.Failed
+	nodeDisabled = node.Disabled
+	requests = node.Metrics.Requests
+	failCount = node.Metrics.FailCount
+	firstByteDur = node.Metrics.FirstByteDur
+	streamDur = node.Metrics.StreamDur
+	lastPingMS = node.Metrics.LastPingMS
 	p.mu.Unlock()
 
 	if p.store != nil {
@@ -93,6 +112,31 @@ func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter
 		if metricsRec != nil {
 			_ = p.store.InsertMetrics(context.Background(), *metricsRec)
 		}
+	}
+
+	if p.wsHub != nil {
+		successCount := requests - failCount
+		if successCount < 0 {
+			successCount = 0
+		}
+		successRate := calculateSuccessRate(successCount, failCount)
+		totalDuration := firstByteDur + streamDur
+		avgResponseTime := calculateAvgResponseTime(totalDuration.Milliseconds(), requests)
+		status := "offline"
+		if !nodeFailed && !nodeDisabled {
+			status = "online"
+		}
+		p.wsHub.Broadcast(accountID, "node_metrics", map[string]interface{}{
+			"node_id":           nodeIDCopy,
+			"node_name":         nodeName,
+			"status":            status,
+			"total_requests":    requests,
+			"failed_requests":   failCount,
+			"success_rate":      successRate,
+			"avg_response_time": avgResponseTime,
+			"last_ping_ms":      lastPingMS,
+			"timestamp":         time.Now().UTC().Format(time.RFC3339),
+		})
 	}
 }
 
