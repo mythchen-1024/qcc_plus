@@ -103,18 +103,17 @@ export default function HealthTimeline({ nodeId, refreshKey = 0, latest, shareTo
 		return checks.reduce(
 			(acc, cur) => {
 				if (!cur.success) acc.fail += 1
-				else if ((cur.response_time_ms || 0) >= 1000) acc.slow += 1
 				else acc.ok += 1
 				return acc
 			},
-			{ ok: 0, slow: 0, fail: 0 },
+			{ ok: 0, fail: 0 },
 		)
 	}, [history])
 
 	const renderTooltip = () => {
 		if (!hover) return null
 		const { rec, x, y } = hover
-		const status = !rec.success ? '失败' : rec.response_time_ms >= 1000 ? '较慢' : '正常'
+		const status = rec.success ? '在线' : '离线'
 		const tooltip = (
 			<div className="health-tooltip" style={{ left: x + 12, top: y - 10 }}>
 				<div className="health-tooltip__time">{formatBeijingTime(rec.check_time)}</div>
@@ -150,9 +149,8 @@ export default function HealthTimeline({ nodeId, refreshKey = 0, latest, shareTo
 					</div>
 				</div>
 				<div className="health-timeline__stats">
-					<span className="pill ok">{stats.ok}</span>
-					<span className="pill slow">{stats.slow}</span>
-					<span className="pill fail">{stats.fail}</span>
+					<span className="pill ok">在线 {stats.ok}</span>
+					<span className="pill fail">离线 {stats.fail}</span>
 				</div>
 			</div>
 
@@ -161,7 +159,7 @@ export default function HealthTimeline({ nodeId, refreshKey = 0, latest, shareTo
 				{!loading && checks.length === 0 && <div className="health-empty">暂无数据</div>}
 				{!loading &&
 					checks.map((rec, idx) => {
-						const color = !rec.success ? 'fail' : rec.response_time_ms >= 1000 ? 'slow' : 'ok'
+						const color = rec.success ? 'ok' : 'fail'
 						return (
 							<div
 								key={`${rec.check_time}-${idx}`}

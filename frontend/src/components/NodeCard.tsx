@@ -9,17 +9,7 @@ interface NodeCardProps {
   shareToken?: string
 }
 
-const statusLabel: Record<string, string> = {
-  online: '在线',
-  offline: '离线',
-  degraded: '离线',
-  disabled: '停用',
-  unknown: '离线',
-}
-
 export default function NodeCard({ node, historyRefreshKey, healthEvent, shareToken }: NodeCardProps) {
-  const resolvedStatus = node.disabled ? 'disabled' : node.status || 'unknown'
-  const trafficStatus = resolvedStatus === 'degraded' || resolvedStatus === 'unknown' ? 'offline' : resolvedStatus
   const successRate = Number(node.traffic?.success_rate ?? 0)
   const avgTime = Number(node.traffic?.avg_response_time ?? 0)
   const totalReq = Number(node.traffic?.total_requests ?? 0)
@@ -41,14 +31,6 @@ export default function NodeCard({ node, historyRefreshKey, healthEvent, shareTo
         <div className="node-card__title-wrap">
           <div className="node-card__title">{node.name || '未命名节点'}</div>
           <div className="node-card__url">{node.url || '-'}</div>
-        </div>
-        <div className="node-card__status-badges">
-          <span className={`status-badge traffic ${trafficStatus}`}>
-            流量 · {statusLabel[trafficStatus] || trafficStatus}
-          </span>
-          <span className={`status-badge health ${healthStatus}`}>
-            探活 · {healthLabel[healthStatus] || healthStatus}
-          </span>
         </div>
       </div>
 

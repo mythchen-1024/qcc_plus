@@ -67,12 +67,6 @@
 	border-color: var(--color-success-border);
 }
 
-.health-timeline__stats .pill.slow {
-	background: var(--color-warning-bg);
-	color: var(--color-warning-text);
-	border-color: var(--color-warning-border);
-}
-
 .health-timeline__stats .pill.fail {
 	background: var(--color-danger-bg);
 	color: var(--color-danger-text);
@@ -136,10 +130,6 @@
 
 .health-dot.ok {
 	background: var(--color-success-500);
-}
-
-.health-dot.slow {
-	background: var(--color-warning-500);
 }
 
 .health-dot.fail {
