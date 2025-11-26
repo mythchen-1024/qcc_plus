@@ -73,7 +73,7 @@ func (p *Server) handleFailure(nodeID string, errMsg string) {
 				"node_name": nodeName,
 				"status":    "offline",
 				"error":     errMsg,
-				"timestamp": time.Now().Format(time.RFC3339),
+				"timestamp": timeutil.FormatBeijingTime(time.Now()),
 			})
 		}
 		p.selectBestAndActivate(acc, "节点故障")
@@ -251,7 +251,7 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 				"node_id":   n.ID,
 				"node_name": n.Name,
 				"status":    "online",
-				"timestamp": time.Now().Format(time.RFC3339),
+				"timestamp": timeutil.FormatBeijingTime(time.Now()),
 			})
 		}
 		p.maybePromoteRecovered(n)
@@ -282,7 +282,7 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 			"success_rate":      successRate,
 			"avg_response_time": avgResponseTime,
 			"last_ping_ms":      metricsSnapshot.LastPingMS,
-			"timestamp":         ts.UTC().Format(time.RFC3339),
+			"timestamp":         timeutil.FormatBeijingTime(ts),
 		})
 	}
 }
@@ -447,7 +447,7 @@ func (p *Server) recordHealthEvent(accountID, nodeID, method string, success boo
 	if p.wsHub != nil {
 		payload := map[string]interface{}{
 			"node_id":          nodeID,
-			"check_time":       checkTime.Format(time.RFC3339Nano),
+			"check_time":       timeutil.FormatBeijingTime(checkTime),
 			"success":          success,
 			"response_time_ms": respMs,
 			"error_message":    errMsg,

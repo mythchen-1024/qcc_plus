@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"qcc_plus/internal/store"
+	"qcc_plus/internal/timeutil"
 )
 
 type MonitorDashboardResponse struct {
@@ -168,7 +169,7 @@ func (p *Server) buildMonitorDashboardResponse(ctx context.Context, target *Acco
 		}
 		var lastCheck *string
 		if !snap.Metrics.LastHealthCheckAt.IsZero() {
-			ts := snap.Metrics.LastHealthCheckAt.UTC().Format(time.RFC3339)
+			ts := timeutil.FormatBeijingTime(snap.Metrics.LastHealthCheckAt)
 			lastCheck = &ts
 		}
 		totalDuration := snap.Metrics.FirstByteDur + snap.Metrics.StreamDur
@@ -200,7 +201,7 @@ func (p *Server) buildMonitorDashboardResponse(ctx context.Context, target *Acco
 		AccountID:   accountID,
 		AccountName: name,
 		Nodes:       nodes,
-		UpdatedAt:   time.Now().UTC().Format(time.RFC3339),
+		UpdatedAt:   timeutil.FormatBeijingTime(time.Now()),
 	}
 	return &resp
 }
@@ -224,7 +225,7 @@ func buildTrendPoints(records []store.MetricsRecord) []TrendPoint {
 	points := make([]TrendPoint, 0, len(records))
 	for _, rec := range records {
 		points = append(points, TrendPoint{
-			Timestamp:   rec.Timestamp.UTC().Format(time.RFC3339),
+			Timestamp:   timeutil.FormatBeijingTime(rec.Timestamp),
 			SuccessRate: calculateSuccessRate(rec.RequestsSuccess, rec.RequestsFailed),
 			AvgTime:     calculateAvgResponseTime(rec.ResponseTimeSumMs, rec.ResponseTimeCount),
 		})

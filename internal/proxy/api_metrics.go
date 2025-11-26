@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"qcc_plus/internal/store"
+	"qcc_plus/internal/timeutil"
 )
 
 // respondJSON 保持与其他 API 一致的 JSON 响应格式。
@@ -78,7 +79,7 @@ func (p *Server) handleGetNodeMetrics(w http.ResponseWriter, r *http.Request) {
 		avgFirst := safeDiv(rec.FirstByteTimeSumMs, rec.ResponseTimeCount)
 		avgStream := safeDiv(rec.StreamDurationSumMs, rec.ResponseTimeCount)
 		data = append(data, map[string]interface{}{
-			"timestamp":              rec.Timestamp.UTC().Format(time.RFC3339),
+			"timestamp":              timeutil.FormatBeijingTime(rec.Timestamp),
 			"requests_total":         rec.RequestsTotal,
 			"requests_success":       rec.RequestsSuccess,
 			"requests_failed":        rec.RequestsFailed,
@@ -182,7 +183,7 @@ func (p *Server) handleGetAccountMetrics(w http.ResponseWriter, r *http.Request)
 	for _, ts := range keys[start:end] {
 		rec := agg[ts]
 		data = append(data, map[string]interface{}{
-			"timestamp":              ts.Format(time.RFC3339),
+			"timestamp":              timeutil.FormatBeijingTime(ts),
 			"requests_total":         rec.RequestsTotal,
 			"requests_success":       rec.RequestsSuccess,
 			"requests_failed":        rec.RequestsFailed,

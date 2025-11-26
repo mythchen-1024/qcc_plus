@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"qcc_plus/internal/store"
+	"qcc_plus/internal/timeutil"
 )
 
 type metricsWriter struct {
@@ -135,7 +136,7 @@ func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter
 			"success_rate":      successRate,
 			"avg_response_time": avgResponseTime,
 			"last_ping_ms":      lastPingMS,
-			"timestamp":         time.Now().UTC().Format(time.RFC3339),
+			"timestamp":         timeutil.FormatBeijingTime(time.Now()),
 		})
 	}
 }

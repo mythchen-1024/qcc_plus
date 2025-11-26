@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"qcc_plus/internal/store"
+	"qcc_plus/internal/timeutil"
 )
 
 // handleNodeAPIRoutes 分发 /api/nodes/* 路由。
@@ -138,7 +139,7 @@ func (p *Server) handleGetHealthHistory(w http.ResponseWriter, r *http.Request) 
 	checks := make([]map[string]interface{}, 0, len(records))
 	for _, rec := range records {
 		checks = append(checks, map[string]interface{}{
-			"check_time":       rec.CheckTime.UTC().Format(time.RFC3339),
+			"check_time":       timeutil.FormatBeijingTime(rec.CheckTime),
 			"success":          rec.Success,
 			"response_time_ms": rec.ResponseTimeMs,
 			"error_message":    rec.ErrorMessage,
