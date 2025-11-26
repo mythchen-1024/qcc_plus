@@ -1,6 +1,11 @@
 package store
 
-import "context"
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"log"
+)
 
 func (s *Store) ensureAccountsTable(ctx context.Context) error {
 	ctx, cancel := withTimeout(ctx)
@@ -401,6 +406,114 @@ func (s *Store) ensureDefaultAccount(ctx context.Context) error {
 	return nil
 }
 
+// migrateConfigToSettings 将旧 config 表的数据迁移到新的 settings 表。
+//
+// 迁移规则：
+//   - system 级别：取 config 第一条记录的 retries/fail_limit/health_every_ms 分别写入
+//     proxy.retry_max、health.fail_threshold、health.check_interval_sec。
+//   - account 级别：为每个账号写入 node.active_node。
+//   - 使用 INSERT IGNORE 保证幂等，不覆盖已存在的 settings。
+//   - 当 config 表不存在或无数据时直接跳过。
+func (s *Store) migrateConfigToSettings(ctx context.Context) error {
+	log.Printf("[migration] start config->settings migration")
+
+	// 1) 检查 config 表是否存在。
+	configExists, err := s.tableExists(ctx, "config")
+	if err != nil {
+		log.Printf("[migration] check config table failed: %v", err)
+		return err
+	}
+	if !configExists {
+		log.Printf("[migration] skip: config table not found")
+		return nil
+	}
+
+	// 2) 读取所有 config 记录。
+	qctx, cancel := withTimeout(ctx)
+	defer cancel()
+	rows, err := s.db.QueryContext(qctx, `SELECT account_id, retries, fail_limit, health_every_ms, active_node FROM config ORDER BY account_id ASC`)
+	if err != nil {
+		log.Printf("[migration] query config failed: %v", err)
+		return err
+	}
+	defer rows.Close()
+
+	type legacyConfig struct {
+		AccountID     string
+		Retries       int
+		FailLimit     int
+		HealthEveryMs int64
+		ActiveNode    sql.NullString
+	}
+
+	var configs []legacyConfig
+	for rows.Next() {
+		var cfg legacyConfig
+		if err := rows.Scan(&cfg.AccountID, &cfg.Retries, &cfg.FailLimit, &cfg.HealthEveryMs, &cfg.ActiveNode); err != nil {
+			log.Printf("[migration] scan config row failed: %v", err)
+			return err
+		}
+		cfg.AccountID = normalizeAccount(cfg.AccountID)
+		configs = append(configs, cfg)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("[migration] iterate config failed: %v", err)
+		return err
+	}
+	if len(configs) == 0 {
+		log.Printf("[migration] skip: config table empty")
+		return nil
+	}
+
+	log.Printf("[migration] loaded %d legacy config rows", len(configs))
+
+	// 3) system 级别配置使用第一条记录。
+	sysCfg := configs[0]
+	if err := s.insertSettingIfMissing(ctx, "proxy.retry_max", "system", nil, sysCfg.Retries, "number", "performance"); err != nil {
+		return err
+	}
+	if err := s.insertSettingIfMissing(ctx, "health.fail_threshold", "system", nil, sysCfg.FailLimit, "number", "health"); err != nil {
+		return err
+	}
+	if err := s.insertSettingIfMissing(ctx, "health.check_interval_sec", "system", nil, sysCfg.HealthEveryMs/1000, "number", "health"); err != nil {
+		return err
+	}
+	log.Printf("[migration] system settings migrated from account %s", sysCfg.AccountID)
+
+	// 4) account 级别 active_node。
+	var accountInserted int
+	for _, cfg := range configs {
+		accountID := normalizeAccount(cfg.AccountID)
+		var activeValue any
+		if cfg.ActiveNode.Valid {
+			activeValue = cfg.ActiveNode.String
+		} else {
+			activeValue = ""
+		}
+		if err := s.insertSettingIfMissing(ctx, "node.active_node", "account", accountID, activeValue, "string", "performance"); err != nil {
+			return err
+		}
+		accountInserted++
+	}
+	log.Printf("[migration] account active_node migrated: %d rows", accountInserted)
+
+	log.Printf("[migration] config->settings migration finished")
+	return nil
+}
+
+// insertSettingIfMissing 使用 INSERT IGNORE 写入 settings，保持幂等。
+func (s *Store) insertSettingIfMissing(ctx context.Context, key, scope string, account interface{}, value any, dataType, category string) error {
+	body, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	ictx, cancel := withTimeout(ctx)
+	defer cancel()
+	_, err = s.db.ExecContext(ictx, "INSERT IGNORE INTO settings (`key`, scope, account_id, value, data_type, category, is_secret, version) VALUES (?,?,?,?,?,?,FALSE,1)",
+		key, scope, account, body, dataType, category)
+	return err
+}
+
 func (s *Store) columnExists(ctx context.Context, table, column string) (bool, error) {
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()
@@ -411,6 +524,22 @@ func (s *Store) columnExists(ctx context.Context, table, column string) (bool, e
 		  AND TABLE_NAME = ?
 		  AND COLUMN_NAME = ?
 	`, table, column)
+	var exists bool
+	if err := row.Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (s *Store) tableExists(ctx context.Context, table string) (bool, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+	row := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) > 0
+		FROM information_schema.TABLES
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = ?
+	`, table)
 	var exists bool
 	if err := row.Scan(&exists); err != nil {
 		return false, err
