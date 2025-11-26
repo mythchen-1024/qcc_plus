@@ -134,26 +134,26 @@ export default function HealthTimeline({ nodeId, refreshKey = 0, latest, shareTo
 	return (
 		<div className="health-timeline">
 			<div className="health-timeline__header">
-				<div className="health-timeline__title">健康检查历史</div>
-				<div className="health-timeline__actions">
-					{(['24h', '7d', '30d'] as RangeKey[]).map((key) => (
-						<button
-							key={key}
-							type="button"
-							className={`chip ${range === key ? 'active' : ''}`}
-							onClick={() => setRange(key)}
-						>
-							{key === '24h' ? '24 小时' : key === '7d' ? '7 天' : '30 天'}
-						</button>
-					))}
+				<div className="health-timeline__left">
+					<span className="health-timeline__title">健康检查</span>
+					<div className="health-timeline__chips">
+						{(['24h', '7d', '30d'] as RangeKey[]).map((key) => (
+							<button
+								key={key}
+								type="button"
+								className={`chip ${range === key ? 'active' : ''}`}
+								onClick={() => setRange(key)}
+							>
+								{key}
+							</button>
+						))}
+					</div>
 				</div>
-			</div>
-
-			<div className="health-timeline__summary">
-				<span>总数 {history?.total ?? 0}</span>
-				<span className="pill ok">正常 {stats.ok}</span>
-				<span className="pill slow">较慢 {stats.slow}</span>
-				<span className="pill fail">失败 {stats.fail}</span>
+				<div className="health-timeline__stats">
+					<span className="pill ok">{stats.ok}</span>
+					<span className="pill slow">{stats.slow}</span>
+					<span className="pill fail">{stats.fail}</span>
+				</div>
 			</div>
 
 			<div className={`health-track ${loading ? 'loading' : ''}`}>

@@ -25,51 +25,50 @@ export default function NodeCard({ node, historyRefreshKey, healthEvent, shareTo
   const lastCheck = node.last_check_at ? formatBeijingTime(node.last_check_at) : '暂无'
   const lastError = (node.last_error || '').trim()
 
-  return (
-    <div className="node-card">
-      <div className="node-card__header">
-        <div className="node-card__title-wrap">
-          <div className="node-card__title">{node.name || '未命名节点'}</div>
-          <div className="node-card__url">{node.url || '-'}</div>
-        </div>
-        <div className={`node-card__status ${resolvedStatus}`}>
-          <span className="dot" />
-          {statusLabel[resolvedStatus] || resolvedStatus || '未知'}
-        </div>
-      </div>
+	return (
+		<div className="node-card">
+			<div className="node-card__header">
+				<div className="node-card__title-wrap">
+					<div className="node-card__title">{node.name || '未命名节点'}</div>
+					<div className="node-card__url">{node.url || '-'}</div>
+				</div>
+				<div className={`node-card__status ${resolvedStatus}`}>
+					<span className="dot" />
+					{statusLabel[resolvedStatus] || resolvedStatus || '未知'}
+				</div>
+			</div>
 
-	<div className="node-card__metrics">
-		<Metric label="权重" value={node.weight ?? '-'} />
-		<Metric label="成功率" value={`${successRate.toFixed(1)}%`} />
-		<Metric label="平均耗时" value={avgTime ? `${avgTime} ms` : '--'} />
-		<Metric label="请求数" value={totalReq.toLocaleString()} />
-		<Metric label="失败数" value={failedReq.toLocaleString()} danger={failedReq > 0} />
-		<Metric label="健康检查" value={lastCheck} />
-	</div>
+			<div className="node-card__metrics">
+				<div className="node-card__metrics-row primary">
+					<span>成功率 <strong>{successRate.toFixed(1)}%</strong></span>
+					<span className="sep">|</span>
+					<span>平均 <strong>{avgTime ? `${avgTime}ms` : '--'}</strong></span>
+					<span className="sep">|</span>
+					<span>请求 <strong>{totalReq.toLocaleString()}</strong></span>
+				</div>
+				<div className="node-card__metrics-row secondary">
+					<span className={failedReq > 0 ? 'danger' : ''}>失败 <strong>{failedReq.toLocaleString()}</strong></span>
+					<span className="sep">|</span>
+					<span>权重 <strong>{node.weight ?? '-'}</strong></span>
+					<span className="sep">|</span>
+					<span>检查 <strong>{lastCheck}</strong></span>
+				</div>
+			</div>
 
-	<HealthTimeline
-		nodeId={node.id}
-		refreshKey={historyRefreshKey}
-		latest={healthEvent}
-		shareToken={shareToken}
-	/>
+			<HealthTimeline
+				nodeId={node.id}
+				refreshKey={historyRefreshKey}
+				latest={healthEvent}
+				shareToken={shareToken}
+			/>
 
-	<div className="node-card__footer">
-        <div className="node-card__badges">
-          {node.is_active && <span className="badge badge-primary">当前主用</span>}
-          {node.disabled && <span className="badge badge-muted">已停用</span>}
-        </div>
-        {lastError && <div className="node-card__error">最后错误：{lastError}</div>}
-      </div>
-    </div>
-  )
-}
-
-function Metric({ label, value, danger = false }: { label: string; value: string | number; danger?: boolean }) {
-  return (
-    <div className={`node-card__metric${danger ? ' danger' : ''}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  )
+			<div className="node-card__footer">
+				<div className="node-card__badges">
+					{node.is_active && <span className="badge badge-primary">当前主用</span>}
+					{node.disabled && <span className="badge badge-muted">已停用</span>}
+				</div>
+				{lastError && <div className="node-card__error">最后错误：{lastError}</div>}
+			</div>
+		</div>
+	)
 }

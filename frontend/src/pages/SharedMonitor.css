@@ -1,5 +1,5 @@
 .shared-monitor-page {
-  padding: 40px 32px;
+  padding: 24px 24px;
   max-width: 1400px;
   margin: 0 auto;
   color: var(--text-primary);
@@ -7,12 +7,12 @@
 
 .shared-monitor-page header {
   text-align: center;
-  margin-bottom: 36px;
+  margin-bottom: 16px;
 }
 
 .shared-monitor-page h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 22px;
   letter-spacing: 0.5px;
 }
 
@@ -74,6 +74,6 @@ footer {
   text-align: center;
   color: var(--text-muted);
   font-size: 13px;
-  padding-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }

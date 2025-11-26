@@ -1,24 +1,31 @@
 .health-timeline {
-	margin-top: 10px;
+	margin-top: 8px;
 }
 
 .health-timeline__header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	gap: 10px;
+	gap: 8px;
 	margin-bottom: 6px;
+	flex-wrap: wrap;
+}
+
+.health-timeline__left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 .health-timeline__title {
-	font-size: 13px;
-	color: var(--text-secondary);
+	font-size: 12px;
+	color: var(--text-muted);
 	font-weight: 600;
 }
 
-.health-timeline__actions {
+.health-timeline__chips {
 	display: flex;
-	gap: 8px;
+	gap: 4px;
 }
 
 .health-timeline .chip {
@@ -26,8 +33,8 @@
 	background: rgba(255, 255, 255, 0.04);
 	color: #fff;
 	border-radius: 999px;
-	padding: 4px 10px;
-	font-size: 12px;
+	padding: 2px 8px;
+	font-size: 11px;
 	cursor: pointer;
 	transition: all 0.15s ease;
 }
@@ -38,38 +45,35 @@
 	color: #a7f3d0;
 }
 
-.health-timeline__summary {
+.health-timeline__stats {
 	display: flex;
-	align-items: center;
-	gap: 10px;
-	font-size: 12px;
-	color: var(--text-muted);
-	margin-bottom: 8px;
+	gap: 6px;
 }
 
-.health-timeline__summary .pill {
+.health-timeline__stats .pill {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	padding: 2px 8px;
+	padding: 2px 6px;
 	border-radius: 999px;
 	font-weight: 600;
 	border: 1px solid transparent;
+	font-size: 11px;
 }
 
-.health-timeline__summary .pill.ok {
+.health-timeline__stats .pill.ok {
 	background: rgba(16, 185, 129, 0.15);
 	color: #34d399;
 	border-color: rgba(16, 185, 129, 0.35);
 }
 
-.health-timeline__summary .pill.slow {
+.health-timeline__stats .pill.slow {
 	background: rgba(245, 158, 11, 0.15);
 	color: #fbbf24;
 	border-color: rgba(245, 158, 11, 0.35);
 }
 
-.health-timeline__summary .pill.fail {
+.health-timeline__stats .pill.fail {
 	background: rgba(239, 68, 68, 0.15);
 	color: #fca5a5;
 	border-color: rgba(239, 68, 68, 0.35);
@@ -81,11 +85,12 @@
 	align-items: center;
 	gap: 4px;
 	overflow-x: auto;
-	padding: 10px;
+	padding: 6px 8px;
 	border-radius: 12px;
 	background: rgba(255, 255, 255, 0.03);
 	border: 1px solid rgba(255, 255, 255, 0.06);
-	min-height: 28px;
+	min-height: 22px;
+	flex-wrap: wrap;
 }
 
 .health-track.loading {
@@ -116,8 +121,8 @@
 }
 
 .health-dot {
-	width: 8px;
-	height: 8px;
+	width: 6px;
+	height: 6px;
 	border-radius: 3px;
 	flex: 0 0 auto;
 	transition: transform 0.12s ease, opacity 0.12s ease;
@@ -171,12 +176,11 @@
 }
 
 @media (max-width: 640px) {
-	.health-timeline__actions {
+	.health-timeline__left {
 		flex-wrap: wrap;
 	}
-	.health-timeline__summary {
-		flex-wrap: wrap;
-		gap: 6px;
+	.health-timeline__stats {
+		width: 100%;
+		justify-content: flex-start;
 	}
 }
-
