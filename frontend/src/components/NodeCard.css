@@ -6,7 +6,7 @@
   box-shadow: var(--glass-shadow);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
@@ -49,9 +49,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -91,66 +91,71 @@
   color: #c7d2fe;
 }
 
-.node-card__metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.node-card__section {
-  padding: 10px 12px;
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-}
-
-.node-card__section.traffic {
-  box-shadow: inset 0 1px 0 rgba(16, 185, 129, 0.15);
-}
-
-.node-card__section.health {
-  box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.15);
-}
-
-.section-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 10px;
-  letter-spacing: 0.2px;
-}
-
-.section-content {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 12px;
-}
-
-.metric-item {
+/* 紧凑指标区 */
+.node-card__metrics-compact {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+.metrics-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.metrics-row.traffic {
+  border-left: 2px solid rgba(16, 185, 129, 0.5);
+}
+
+.metrics-row.health {
+  border-left: 2px solid rgba(59, 130, 246, 0.5);
+}
+
+.metrics-row .row-label {
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 12px;
+  min-width: 32px;
+}
+
+.metrics-row .metric {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
 }
 
-.metric-item .label {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.metric-item strong {
+.metrics-row .metric strong {
   color: #fff;
-  font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 14px;
 }
 
-
-.metric-item strong.danger {
-  color: #fca5a5;
+.metrics-row .metric.secondary,
+.metrics-row .metric.secondary strong {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.health-up { color: #c7d2fe; }
-.health-down { color: #fecdd3; }
-.health-stale { color: #fcd34d; }
+.metrics-row .sep {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.metrics-row .danger {
+  color: #fca5a5 !important;
+}
+
+.metrics-row .health-up strong { color: #a7f3d0; }
+.metrics-row .health-down strong { color: #fca5a5; }
+.metrics-row .health-stale strong { color: #fcd34d; }
 
 .node-card__footer {
   display: flex;
@@ -186,13 +191,12 @@
   color: #e5e7eb;
 }
 
-.node-card__error {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+/* Footer 错误信息内联 */
+.node-card__error-inline {
   color: #fca5a5;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 11px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
