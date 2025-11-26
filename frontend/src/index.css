@@ -2,25 +2,13 @@
   font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color-scheme: light dark;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-page);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  --primary-color: #646cff;
-  --primary-hover: #535bf2;
-  --bg-overlay: rgba(0, 0, 0, 0.7);
-  --glass-bg: rgba(20, 20, 20, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-  --text-primary: rgba(255, 255, 255, 0.95);
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-muted: rgba(255, 255, 255, 0.5);
 }
 
 body {
@@ -28,7 +16,7 @@ body {
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--color-bg-page, #1a1a1a);
+  background-color: var(--color-bg-page);
 }
 
 #root {
@@ -42,19 +30,20 @@ h1 {
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-default);
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--color-bg-card);
+  color: var(--color-text-primary);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color var(--transition-normal), color var(--transition-normal), background-color var(--transition-normal);
 }
 
 button:hover {
-  border-color: #646cff;
+  border-color: var(--color-primary);
 }
 
 button:focus,
@@ -69,14 +58,14 @@ button:focus-visible {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--color-bg-card);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  background: var(--color-divider);
+  border-radius: var(--radius-md);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--color-border-default);
 }

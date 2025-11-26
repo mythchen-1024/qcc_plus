@@ -25,15 +25,12 @@
   margin: 0;
   font-size: 30px;
   font-weight: 800;
-  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--color-text-primary);
 }
 
 .monitor-header .sub {
   margin: 6px 0 0;
-  color: rgba(255, 255, 255, 0.65);
+  color: color-mix(in srgb, var(--color-text-primary) 65%, transparent);
 }
 
 .monitor-header-actions {
@@ -51,21 +48,21 @@
   border-radius: 999px;
   font-weight: 700;
   font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--color-border-default);
+  background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  color: color-mix(in srgb, var(--color-text-primary) 80%, transparent);
 }
 
 .ws-pill.on {
-  border-color: rgba(34, 197, 94, 0.45);
-  background: rgba(34, 197, 94, 0.12);
-  color: #bbf7d0;
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
 .ws-pill.off {
-  border-color: rgba(239, 68, 68, 0.45);
-  background: rgba(239, 68, 68, 0.12);
-  color: #fecaca;
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
 }
 
 .status-dot {
@@ -73,13 +70,13 @@
   height: 10px;
   border-radius: 50%;
   display: inline-block;
-  background: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  background: var(--color-success-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success-500) 25%, transparent);
 }
 
 .ws-pill.off .status-dot {
-  background: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+  background: var(--color-danger-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger-500) 25%, transparent);
 }
 
 .monitor-toolbar {
@@ -93,14 +90,14 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: rgba(255, 255, 255, 0.7);
+  color: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
   font-size: 13px;
 }
 
 .monitor-toolbar select {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
   padding: 10px 12px;
   border-radius: 10px;
   min-width: 200px;
@@ -118,25 +115,25 @@
 }
 
 .stat-card.glass {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-default);
   border-radius: 14px;
   padding: 14px 16px;
   display: grid;
   gap: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .muted-title {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
+  color: color-mix(in srgb, var(--color-text-primary) 65%, transparent);
   letter-spacing: 0.4px;
 }
 
 .kpi-main {
   font-size: 24px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 .badge {
@@ -150,21 +147,21 @@
 }
 
 .badge.green {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border: 1px solid var(--color-success-border);
 }
 
 .badge.gray {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  color: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
+  border: 1px solid var(--color-border-default);
 }
 
 .badge.warn {
-  background: rgba(245, 158, 11, 0.16);
-  color: #fcd34d;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid var(--color-warning-border);
 }
 
 .nodes-grid {
@@ -174,20 +171,20 @@
 }
 
 .monitor-card {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-default);
   border-radius: 16px;
   padding: 16px;
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--shadow-md);
   display: grid;
   gap: 10px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 
 .monitor-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
 }
 
 .monitor-card-head {
@@ -205,12 +202,12 @@
 .node-name {
   font-weight: 700;
   font-size: 16px;
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 .node-url {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
   word-break: break-all;
 }
 
@@ -227,36 +224,36 @@
 }
 
 .status-pill.online {
-  background: rgba(34, 197, 94, 0.16);
+  background: var(--color-success-bg);
   color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.35);
+  border: 1px solid var(--color-success-border);
 }
 
 .status-pill.offline {
-  background: rgba(239, 68, 68, 0.14);
+  background: var(--color-danger-bg);
   color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  border: 1px solid var(--color-danger-border);
 }
 
 .status-pill.checking {
-  background: rgba(245, 158, 11, 0.14);
+  background: var(--color-warning-bg);
   color: #fcd34d;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  border: 1px solid var(--color-warning-border);
 }
 
 .status-pill.online .status-dot {
   background: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16);
+  box-shadow: 0 0 0 3px var(--color-success-bg);
 }
 
 .status-pill.offline .status-dot {
   background: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.16);
+  box-shadow: 0 0 0 3px var(--color-danger-bg);
 }
 
 .status-pill.checking .status-dot {
   background: #f59e0b;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+  box-shadow: 0 0 0 3px var(--color-warning-bg);
 }
 
 .monitor-metrics {
@@ -266,8 +263,8 @@
 }
 
 .metric {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--color-text-primary) 3%, transparent);
+  border: 1px solid var(--color-divider);
   border-radius: 12px;
   padding: 10px 12px;
   display: grid;
@@ -276,12 +273,12 @@
 
 .metric .label {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
+  color: color-mix(in srgb, var(--color-text-primary) 65%, transparent);
 }
 
 .metric .value {
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 .metric .value.warn {
@@ -296,7 +293,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: color-mix(in srgb, var(--color-text-primary) 60%, transparent);
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -304,15 +301,15 @@
 .monitor-error {
   font-size: 12px;
   color: #fca5a5;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
   border-radius: 10px;
   padding: 8px 10px;
   word-break: break-all;
 }
 
 .monitor-chart {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-divider);
   padding-top: 8px;
 }
 
@@ -329,7 +326,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.04) 100%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-text-primary) 4%, transparent) 0%, color-mix(in srgb, var(--color-text-primary) 8%, transparent) 50%, color-mix(in srgb, var(--color-text-primary) 4%, transparent) 100%);
   animation: shimmer 1.2s infinite;
 }
 
@@ -344,13 +341,13 @@
 
 .skeleton-block {
   height: 120px;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
   border-radius: 12px;
 }
 
 .empty {
   padding: 18px;
-  color: rgba(255, 255, 255, 0.6);
+  color: color-mix(in srgb, var(--color-text-primary) 60%, transparent);
 }
 
 .share-toolbar {
@@ -365,14 +362,14 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: rgba(255, 255, 255, 0.7);
+  color: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
   font-size: 13px;
 }
 
 .share-toolbar select {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: var(--color-bg-elevated);
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 14%, transparent);
+  color: var(--color-text-primary);
   padding: 10px 12px;
   border-radius: 10px;
 }
@@ -388,15 +385,15 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--color-text-primary) 3%, transparent);
+  border: 1px solid var(--color-divider);
   border-radius: 12px;
-  color: rgba(255, 255, 255, 0.85);
+  color: color-mix(in srgb, var(--color-text-primary) 85%, transparent);
 }
 
 .share-head {
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.65);
+  color: color-mix(in srgb, var(--color-text-primary) 65%, transparent);
   background: transparent;
   border: none;
   padding: 0;
@@ -405,7 +402,7 @@
 .share-link {
   font-family: 'JetBrains Mono', 'SFMono-Regular', monospace;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+  color: color-mix(in srgb, var(--color-text-primary) 80%, transparent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -419,17 +416,17 @@
 }
 
 .pill.ok {
-  background: rgba(34, 197, 94, 0.16);
+  background: var(--color-success-bg);
   color: #4ade80;
 }
 
 .pill.warn {
-  background: rgba(245, 158, 11, 0.16);
+  background: var(--color-warning-bg);
   color: #fcd34d;
 }
 
 .pill.danger {
-  background: rgba(239, 68, 68, 0.16);
+  background: var(--color-danger-bg);
   color: #fca5a5;
 }
 
@@ -451,22 +448,22 @@
 }
 
 .btn.ghost {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  color: color-mix(in srgb, var(--color-text-primary) 90%, transparent);
+  border: 1px solid var(--color-border-default);
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-primary);
   border: none;
-  box-shadow: 0 8px 22px rgba(100, 108, 255, 0.32);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--color-primary) 32%, transparent);
 }
 
 .btn.danger {
-  background: rgba(239, 68, 68, 0.16);
+  background: var(--color-danger-bg);
   color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  border: 1px solid var(--color-danger-border);
 }
 
 .btn:hover:not(:disabled) {

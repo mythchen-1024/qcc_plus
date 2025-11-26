@@ -24,15 +24,11 @@
   font-size: 32px;
   font-weight: 700;
   margin: 0 0 8px 0;
-  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 20px rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
 }
 
 .accounts-header .sub {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-size: 14px;
   margin: 0;
   font-weight: 300;
@@ -52,7 +48,7 @@
   flex-direction: column;
   gap: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-weight: 500;
   flex: 1;
   min-width: 200px;
@@ -60,33 +56,33 @@
 
 .inline-form input,
 .inline-form select {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
   padding: 12px 16px;
   border-radius: 10px;
   outline: none;
   font-size: 14px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   box-sizing: border-box;
 }
 
 .inline-form input:focus,
 .inline-form select:focus {
-  border-color: var(--primary-color);
-  background: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.2), 0 0 20px rgba(100, 108, 255, 0.15);
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
   transform: translateY(-1px);
 }
 
 .inline-form input:hover,
 .inline-form select:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--color-primary);
 }
 
 .inline-form input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text-muted);
 }
 
 /* Form Actions */
@@ -104,7 +100,7 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   position: relative;
   overflow: hidden;
@@ -118,7 +114,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-primary) 25%, transparent), transparent);
   transition: left 0.5s ease;
 }
 
@@ -127,15 +123,15 @@
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
-  color: #fff;
-  box-shadow: 0 4px 15px rgba(100, 108, 255, 0.35);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-md);
 }
 
 .btn.primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(100, 108, 255, 0.45);
-  filter: brightness(1.1);
+  box-shadow: var(--shadow-lg);
+  filter: brightness(1.03);
 }
 
 .btn.primary:active {
@@ -143,15 +139,15 @@
 }
 
 .btn.ghost {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-secondary);
 }
 
 .btn.ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+  background: var(--color-hover);
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
   transform: translateY(-1px);
 }
 
@@ -160,17 +156,17 @@
 }
 
 .btn.danger {
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #f87171;
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger-text);
 }
 
 .btn.danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-text);
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .btn.danger:active {
@@ -194,19 +190,19 @@
 .accounts-table th {
   text-align: left;
   padding: 16px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-muted);
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-bg-card);
 }
 
 .accounts-table td {
   padding: 16px;
-  color: rgba(255, 255, 255, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-divider);
   transition: all 0.2s ease;
 }
 
@@ -215,7 +211,7 @@
 }
 
 .accounts-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-hover);
 }
 
 .accounts-table tr:last-child td {
@@ -223,8 +219,8 @@
 }
 
 .accounts-table tr.editing {
-  background: rgba(100, 108, 255, 0.08) !important;
-  border-left: 3px solid var(--primary-color);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-bg-card)) !important;
+  border-left: 3px solid var(--color-primary);
   position: relative;
 }
 
@@ -235,7 +231,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: linear-gradient(180deg, var(--primary-color), transparent);
+  background: linear-gradient(180deg, var(--color-primary), transparent);
 }
 
 /* Table Actions */
@@ -252,13 +248,13 @@
 
 /* Code Element */
 code {
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--color-bg-elevated);
   padding: 6px 10px;
   border-radius: 6px;
   font-family: 'JetBrains Mono', 'Consolas', monospace;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
   display: inline-block;
   max-width: 200px;
   overflow: hidden;
@@ -282,7 +278,7 @@ code {
 
 /* Muted Text */
 .muted {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-muted);
   font-size: 13px;
   line-height: 1.6;
 }

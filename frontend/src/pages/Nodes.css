@@ -24,15 +24,11 @@
   font-size: 32px;
   font-weight: 700;
   margin: 0 0 8px 0;
-  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 20px rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
 }
 
 .nodes-header .sub {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-size: 14px;
   margin: 0;
   font-weight: 300;
@@ -51,38 +47,38 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 500;
 }
 
 .toolbar select,
 .toolbar input {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
   padding: 10px 14px;
   border-radius: 10px;
   outline: none;
   font-size: 14px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toolbar select:focus,
 .toolbar input:focus {
-  border-color: var(--primary-color);
-  background: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
   transform: translateY(-1px);
 }
 
 .toolbar select:hover,
 .toolbar input:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--color-primary);
 }
 
 .toolbar input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--color-text-muted);
 }
 
 .toolbar .spacer {
@@ -109,20 +105,20 @@ table {
 th {
   text-align: left;
   padding: 16px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-muted);
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--color-divider);
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-card);
 }
 
 td {
   padding: 16px;
-  color: rgba(255, 255, 255, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-divider);
   transition: background 0.2s ease;
 }
 
@@ -131,7 +127,7 @@ tbody tr {
 }
 
 tbody tr:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-hover);
 }
 
 tr:last-child td {
@@ -141,7 +137,7 @@ tr:last-child td {
 .drag-handle-cell {
   width: 54px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-muted);
 }
 
 .drag-handle {
@@ -151,17 +147,17 @@ tr:last-child td {
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.75);
+  border: 1px dashed var(--color-border-default);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
   cursor: grab;
   transition: all 0.2s ease;
 }
 
 .drag-handle:hover {
-  background: rgba(100, 108, 255, 0.12);
-  color: #fff;
-  border-color: rgba(100, 108, 255, 0.45);
+  background: var(--color-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-primary);
 }
 
 .drag-handle:active {
@@ -170,12 +166,12 @@ tr:last-child td {
 }
 
 tbody tr.dragging {
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-  background: rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-lg);
+  background: var(--color-bg-card);
 }
 
 tbody tr.dragging td {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--color-border-default);
 }
 
 /* URL Cell */
@@ -186,11 +182,11 @@ tbody tr.dragging td {
   white-space: nowrap;
   font-family: 'JetBrains Mono', 'Consolas', monospace;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(0, 0, 0, 0.2);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-elevated);
   padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-divider);
 }
 
 /* Pills */
@@ -209,31 +205,31 @@ tbody tr.dragging td {
 }
 
 .pill.ok {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.08);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border: 1px solid var(--color-success-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .pill.warn {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.08);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid var(--color-warning-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .pill.fail {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.08);
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border: 1px solid var(--color-danger-border);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
 }
 
 .pill.off {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-bg-card);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-divider);
 }
 
 .pill:hover {
@@ -243,17 +239,17 @@ tbody tr.dragging td {
 
 /* Health Indicators */
 .health-good {
-  color: #4ade80;
+  color: var(--color-success-text);
   font-weight: 600;
 }
 
 .health-warn {
-  color: #fbbf24;
+  color: var(--color-warning-text);
   font-weight: 600;
 }
 
 .health-bad {
-  color: #f87171;
+  color: var(--color-danger-text);
   font-weight: 700;
 }
 
@@ -282,59 +278,59 @@ tbody tr.dragging td {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   white-space: nowrap;
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
-  color: #fff;
-  box-shadow: 0 4px 15px rgba(100, 108, 255, 0.35);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-md);
 }
 
 .btn.primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(100, 108, 255, 0.45);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn.ghost {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-secondary);
 }
 
 .btn.ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+  background: var(--color-hover);
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
   transform: translateY(-1px);
 }
 
 .btn.warn {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  color: #fbbf24;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
 }
 
 .btn.warn:hover:not(:disabled) {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: rgba(245, 158, 11, 0.4);
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .btn.danger {
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #f87171;
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger-text);
 }
 
 .btn.danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.4);
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .btn:disabled {
@@ -361,37 +357,37 @@ tbody tr.dragging td {
   flex-direction: column;
   gap: 8px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
 .prompt-grid input {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
   padding: 12px 16px;
   border-radius: 10px;
   outline: none;
   font-size: 14px;
   width: 100%;
   box-sizing: border-box;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .prompt-grid input:focus {
-  border-color: var(--primary-color);
-  background: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
   transform: translateY(-1px);
 }
 
 .prompt-grid input:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--color-primary);
 }
 
 .weight-hint {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-muted);
   margin-top: 4px;
 }
 
@@ -400,11 +396,11 @@ tbody tr.dragging td {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--color-bg-card);
   padding: 20px;
   border-radius: 12px;
   margin-bottom: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border-default);
 }
 
 .stat-item {
@@ -415,7 +411,7 @@ tbody tr.dragging td {
 
 .stat-label {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
@@ -424,16 +420,16 @@ tbody tr.dragging td {
 .stat-value {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-primary);
   font-family: 'JetBrains Mono', 'Consolas', monospace;
 }
 
 /* Error Detail */
 .error-detail {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-left: 3px solid #f87171;
-  color: #fca5a5;
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  border-left: 3px solid var(--color-danger-500);
+  color: var(--color-danger-text);
   padding: 16px;
   border-radius: 8px;
   font-family: 'JetBrains Mono', 'Consolas', monospace;
@@ -446,7 +442,7 @@ tbody tr.dragging td {
 
 .error-detail div:first-child {
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-primary);
   margin-bottom: 8px;
 }
 

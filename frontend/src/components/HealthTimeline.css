@@ -19,7 +19,7 @@
 
 .health-timeline__title {
 	font-size: 12px;
-	color: var(--text-muted);
+	color: var(--color-text-muted);
 	font-weight: 600;
 }
 
@@ -29,20 +29,20 @@
 }
 
 .health-timeline .chip {
-	border: 1px solid rgba(255, 255, 255, 0.12);
-	background: rgba(255, 255, 255, 0.04);
-	color: #fff;
+	border: 1px solid var(--color-border-default);
+	background: var(--color-bg-card);
+	color: var(--color-text-primary);
 	border-radius: 999px;
 	padding: 2px 8px;
 	font-size: 11px;
 	cursor: pointer;
-	transition: all 0.15s ease;
+	transition: all var(--transition-fast) ease;
 }
 
 .health-timeline .chip.active {
-	background: rgba(16, 185, 129, 0.16);
-	border-color: rgba(16, 185, 129, 0.45);
-	color: #a7f3d0;
+	background: var(--color-success-bg);
+	border-color: var(--color-success-border);
+	color: var(--color-success-text);
 }
 
 .health-timeline__stats {
@@ -62,21 +62,21 @@
 }
 
 .health-timeline__stats .pill.ok {
-	background: rgba(16, 185, 129, 0.15);
-	color: #34d399;
-	border-color: rgba(16, 185, 129, 0.35);
+	background: var(--color-success-bg);
+	color: var(--color-success-text);
+	border-color: var(--color-success-border);
 }
 
 .health-timeline__stats .pill.slow {
-	background: rgba(245, 158, 11, 0.15);
-	color: #fbbf24;
-	border-color: rgba(245, 158, 11, 0.35);
+	background: var(--color-warning-bg);
+	color: var(--color-warning-text);
+	border-color: var(--color-warning-border);
 }
 
 .health-timeline__stats .pill.fail {
-	background: rgba(239, 68, 68, 0.15);
-	color: #fca5a5;
-	border-color: rgba(239, 68, 68, 0.35);
+	background: var(--color-danger-bg);
+	color: var(--color-danger-text);
+	border-color: var(--color-danger-border);
 }
 
 .health-track {
@@ -87,8 +87,8 @@
 	overflow-x: auto;
 	padding: 6px 8px;
 	border-radius: 12px;
-	background: rgba(255, 255, 255, 0.03);
-	border: 1px solid rgba(255, 255, 255, 0.06);
+	background: var(--color-bg-card);
+	border: 1px solid var(--color-divider);
 	min-height: 22px;
 	flex-wrap: wrap;
 }
@@ -101,7 +101,7 @@
 	width: 100%;
 	height: 8px;
 	border-radius: 999px;
-	background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+	background: linear-gradient(90deg, color-mix(in srgb, var(--color-text-primary) 8%, transparent), color-mix(in srgb, var(--color-text-primary) 18%, transparent), color-mix(in srgb, var(--color-text-primary) 8%, transparent));
 	background-size: 200% 100%;
 	animation: shimmer 1.2s ease-in-out infinite;
 }
@@ -116,7 +116,7 @@
 }
 
 .health-empty {
-	color: var(--text-muted);
+	color: var(--color-text-muted);
 	font-size: 12px;
 }
 
@@ -135,20 +135,20 @@
 }
 
 .health-dot.ok {
-	background: #10b981;
+	background: var(--color-success-500);
 }
 
 .health-dot.slow {
-	background: #f59e0b;
+	background: var(--color-warning-500);
 }
 
 .health-dot.fail {
-	background: #ef4444;
+	background: var(--color-danger-500);
 }
 
 .health-error {
 	margin-top: 6px;
-	color: #fca5a5;
+	color: var(--color-danger-text);
 	font-size: 12px;
 }
 
@@ -157,11 +157,11 @@
 	z-index: 20;
 	min-width: 180px;
 	max-width: 280px;
-	background: rgba(17, 24, 39, 0.92);
-	color: #fff;
+	background: var(--color-bg-elevated);
+	color: var(--color-text-primary);
 	padding: 10px 12px;
 	border-radius: 10px;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+	box-shadow: var(--shadow-md);
 	font-size: 12px;
 	line-height: 1.5;
 }
@@ -172,7 +172,7 @@
 }
 
 .health-tooltip__row {
-	color: #e5e7eb;
+	color: var(--color-text-secondary);
 }
 
 @media (max-width: 640px) {

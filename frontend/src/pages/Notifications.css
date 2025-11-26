@@ -21,15 +21,15 @@
 .notifications-header h1 {
   font-size: 32px;
   margin: 0 0 8px;
-  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+  background: linear-gradient(135deg, var(--color-text-primary) 0%, color-mix(in srgb, var(--color-text-primary) 70%, transparent) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 18px rgba(255, 255, 255, 0.12);
+  text-shadow: 0 2px 18px color-mix(in srgb, var(--color-text-primary) 12%, transparent);
 }
 
 .notifications-header .sub {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   margin: 0;
   font-size: 14px;
 }
@@ -46,7 +46,7 @@
   flex-direction: column;
   gap: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-weight: 500;
   flex: 1;
   min-width: 220px;
@@ -60,9 +60,9 @@
 .test-card input,
 .test-card select,
 .test-card textarea {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
   padding: 12px 14px;
   border-radius: 10px;
   outline: none;
@@ -79,8 +79,8 @@
 .test-card input:focus,
 .test-card select:focus,
 .test-card textarea:focus {
-  border-color: var(--primary-color);
-  background: rgba(0, 0, 0, 0.5);
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
   box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.18);
   transform: translateY(-1px);
 }
@@ -108,8 +108,8 @@
   transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  color: var(--color-text-primary);
 }
 
 .btn::before {
@@ -119,7 +119,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-text-primary) 25%, transparent), transparent);
   transition: left 0.45s ease;
 }
 
@@ -128,7 +128,7 @@
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
+  background: var(--color-primary);
   box-shadow: 0 6px 20px rgba(100, 108, 255, 0.35);
 }
 
@@ -138,9 +138,9 @@
 }
 
 .btn.ghost {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.9);
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 14%, transparent);
+  color: color-mix(in srgb, var(--color-text-primary) 90%, transparent);
 }
 
 .btn.danger {
@@ -174,7 +174,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-size: 13px;
   min-width: 240px;
 }
@@ -197,30 +197,30 @@
 .channels-table th {
   text-align: left;
   padding: 16px;
-  color: rgba(255, 255, 255, 0.6);
+  color: color-mix(in srgb, var(--color-text-primary) 60%, transparent);
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-divider);
+  background: color-mix(in srgb, var(--color-text-primary) 2%, transparent);
   white-space: nowrap;
 }
 
 .channels-table td {
   padding: 16px;
-  color: rgba(255, 255, 255, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: color-mix(in srgb, var(--color-text-primary) 90%, transparent);
+  border: 1px solid var(--color-divider);
   transition: background 0.2s ease;
 }
 
 .channels-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
 }
 
 .channels-table tr.selected {
   background: rgba(100, 108, 255, 0.08);
-  border-left: 3px solid var(--primary-color);
+  border-left: 3px solid var(--color-primary);
 }
 
 .table-actions {
@@ -243,7 +243,7 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 15%, transparent);
 }
 
 .status-badge .dot {
@@ -260,8 +260,8 @@
 }
 
 .status-badge.off {
-  color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.06);
+  color: color-mix(in srgb, var(--color-text-primary) 60%, transparent);
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
 }
 
 .mono {
@@ -274,7 +274,7 @@
 
 .time-cell {
   font-family: 'JetBrains Mono', 'Consolas', monospace;
-  color: rgba(255, 255, 255, 0.72);
+  color: color-mix(in srgb, var(--color-text-primary) 72%, transparent);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -293,8 +293,8 @@
 }
 
 .event-group {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-text-primary) 3%, transparent);
+  border: 1px solid var(--color-divider);
   border-radius: 14px;
   padding: 14px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
@@ -311,7 +311,7 @@
 .group-head h4 {
   margin: 0;
   font-size: 15px;
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 .event-list {
@@ -326,31 +326,31 @@
   align-items: flex-start;
   padding: 10px;
   background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-divider);
   border-radius: 10px;
   cursor: pointer;
 }
 
 .event-item input {
   margin-top: 3px;
-  accent-color: var(--primary-color);
+  accent-color: var(--color-primary);
 }
 
 .event-type {
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
+  color: color-mix(in srgb, var(--color-text-primary) 95%, transparent);
   font-size: 13px;
 }
 
 .event-desc {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
+  color: color-mix(in srgb, var(--color-text-primary) 65%, transparent);
 }
 
 .event-meta {
   margin-top: 4px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
 }
 
 .pill {
@@ -363,21 +363,21 @@
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid color-mix(in srgb, var(--color-text-primary) 14%, transparent);
+  color: color-mix(in srgb, var(--color-text-primary) 80%, transparent);
 }
 
 .pill.light {
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
 }
 
 .empty-box {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--color-text-primary) 20%, transparent);
   border-radius: 12px;
   padding: 16px;
   text-align: center;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   margin-top: 8px;
 }
 
@@ -395,14 +395,14 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .skeleton {
   width: 100%;
   border-radius: 10px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-text-primary) 6%, transparent), color-mix(in srgb, var(--color-text-primary) 12%, transparent), color-mix(in srgb, var(--color-text-primary) 6%, transparent));
   background-size: 200% 100%;
   animation: shimmer 1.2s infinite;
 }
@@ -413,7 +413,7 @@
 }
 
 .muted {
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
 }
 
 @media (max-width: 1024px) {

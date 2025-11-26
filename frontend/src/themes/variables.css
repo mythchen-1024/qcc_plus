@@ -319,8 +319,8 @@
   --button-secondary-bg: #0F172A;
   --button-secondary-text: #F8FAFC;
   --button-secondary-border: #334155;
-  --button-secondary-hover-bg: rgba(255, 255, 255, 0.04);
-  --button-secondary-active-bg: rgba(255, 255, 255, 0.08);
+  --button-secondary-hover-bg: #111827;
+  --button-secondary-active-bg: #0B1220;
   --button-secondary-disabled-bg: #1E293B;
   --button-secondary-disabled-text: #475569;
   --button-secondary-focus-ring: 0 0 0 3px #60A5FA;

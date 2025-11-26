@@ -24,15 +24,11 @@
   font-size: 32px;
   font-weight: 700;
   margin: 0 0 8px 0;
-  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 20px rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
 }
 
 .settings-header .sub {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-size: 14px;
   margin: 0;
   font-weight: 300;
@@ -52,34 +48,34 @@
   flex-direction: column;
   gap: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-weight: 500;
   flex: 1;
   min-width: 200px;
 }
 
 .settings-form input {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
   padding: 12px 16px;
   border-radius: 10px;
   outline: none;
   font-size: 14px;
   width: 100%;
   box-sizing: border-box;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .settings-form input:focus {
-  border-color: var(--primary-color);
-  background: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.2), 0 0 20px rgba(100, 108, 255, 0.15);
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
   transform: translateY(-1px);
 }
 
 .settings-form input:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--color-primary);
 }
 
 .settings-form .btn {
@@ -92,11 +88,11 @@
 /* Notice Box */
 .notice {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-secondary);
   padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-bg-card);
   border-radius: 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border: 1px dashed var(--color-border-default);
   line-height: 1.6;
   margin-top: 24px;
   animation: fadeIn 1s ease-out 0.2s both;
@@ -111,7 +107,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: linear-gradient(180deg, var(--primary-color), transparent);
+  background: linear-gradient(180deg, var(--color-primary), transparent);
   opacity: 0.5;
 }
 
@@ -128,31 +124,31 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 500;
 }
 
 .toolbar select {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
   padding: 10px 14px;
   border-radius: 10px;
   outline: none;
   font-size: 14px;
-  transition: all 0.3s ease;
+  transition: all var(--transition-normal) ease;
   cursor: pointer;
 }
 
 .toolbar select:focus {
-  border-color: var(--primary-color);
-  background: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .toolbar select:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--color-primary);
 }
 
 .toolbar .spacer {
@@ -170,7 +166,7 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   white-space: nowrap;
   position: relative;
@@ -184,7 +180,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-primary) 25%, transparent), transparent);
   transition: left 0.5s ease;
 }
 
@@ -193,15 +189,15 @@
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
-  color: #fff;
-  box-shadow: 0 4px 15px rgba(100, 108, 255, 0.35);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-md);
 }
 
 .btn.primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(100, 108, 255, 0.45);
-  filter: brightness(1.1);
+  box-shadow: var(--shadow-lg);
+  filter: brightness(1.03);
 }
 
 .btn.primary:active {
@@ -209,15 +205,15 @@
 }
 
 .btn.ghost {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-secondary);
 }
 
 .btn.ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+  background: var(--color-hover);
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
   transform: translateY(-1px);
 }
 

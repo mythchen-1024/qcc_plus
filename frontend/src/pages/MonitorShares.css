@@ -25,14 +25,14 @@
 .monitor-shares-header h1 {
   margin: 0;
   font-size: 28px;
-  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+  background: linear-gradient(135deg, var(--color-text-primary) 0%, color-mix(in srgb, var(--color-text-primary) 70%, transparent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .monitor-shares-header .sub {
   margin: 6px 0 0;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 
@@ -44,9 +44,9 @@
 }
 
 .monitor-shares-actions select {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
   padding: 10px 12px;
   border-radius: 10px;
   min-width: 160px;
@@ -60,13 +60,13 @@
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  color: var(--color-text-primary);
 }
 
 .btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: color-mix(in srgb, var(--color-text-primary) 15%, transparent);
 }
 
 .btn:disabled {
@@ -75,13 +75,13 @@
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
+  background: var(--color-primary);
   box-shadow: 0 4px 15px rgba(100, 108, 255, 0.35);
 }
 
 .btn.ghost {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  border: 1px solid var(--color-divider);
 }
 
 .btn.danger {
@@ -99,20 +99,20 @@
 .shares-table th {
   text-align: left;
   padding: 14px;
-  color: var(--text-muted);
+  color: var(--color-text-muted);
   font-weight: 600;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-divider);
+  background: color-mix(in srgb, var(--color-text-primary) 2%, transparent);
 }
 
 .shares-table td {
   padding: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  color: #fff;
+  border: 1px solid var(--color-divider);
+  color: var(--color-text-primary);
 }
 
 .shares-table tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--color-text-primary) 2%, transparent);
 }
 
 .shares-table tr.inactive {
@@ -120,7 +120,7 @@
 }
 
 .shares-table code {
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
   padding: 4px 8px;
   border-radius: 8px;
   font-size: 12px;
@@ -165,7 +165,7 @@
 .table-skeleton {
   height: 16px;
   width: 100%;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-text-primary) 5%, transparent), color-mix(in srgb, var(--color-text-primary) 8%, transparent), color-mix(in srgb, var(--color-text-primary) 5%, transparent));
   border-radius: 8px;
   animation: shimmer 1.2s infinite;
 }
@@ -185,7 +185,7 @@
   align-items: center;
   gap: 12px;
   margin-top: 16px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .share-form {
@@ -198,14 +198,14 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
 .share-form select {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-primary);
   padding: 10px;
   border-radius: 10px;
 }
