@@ -3,7 +3,6 @@ import Card from '../components/Card'
 import Toast from '../components/Toast'
 import api from '../services/api'
 import type { ClaudeConfigTemplate } from '../types'
-import { useTheme } from '../themes'
 import './ClaudeConfig.css'
 
 type Tab = 'unix' | 'windows'
@@ -24,7 +23,6 @@ const formatTime = (iso?: string | null): string => {
 }
 
 export default function ClaudeConfig() {
-  const { resolvedTheme } = useTheme()
   const [template, setTemplate] = useState<ClaudeConfigTemplate | null>(null)
   const [proxyUrl, setProxyUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
@@ -133,7 +131,7 @@ export default function ClaudeConfig() {
         </div>
       </div>
 
-      <Card className={`install-card ${resolvedTheme === 'dark' ? 'is-dark' : ''}`}>
+      <Card className="install-card">
         <div className="install-top">
           <div>
             <div className="eyebrow">一键安装命令</div>
