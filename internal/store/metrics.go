@@ -125,12 +125,16 @@ func (s *Store) QueryMetrics(ctx context.Context, q MetricsQuery) ([]MetricsReco
 }
 
 // GetNode24hTrend 获取指定节点最近 24 小时的小时级聚合数据，按时间升序返回。
+// 该函数会同时查询已聚合的小时数据和当前小时的原始数据，确保数据实时性。
 func (s *Store) GetNode24hTrend(ctx context.Context, accountID, nodeID string) ([]MetricsRecord, error) {
 	accountID = normalizeAccount(accountID)
 	now := time.Now().UTC()
 	from := now.Add(-24 * time.Hour)
+	// 当前小时的起始时间
+	currentHourStart := now.Truncate(time.Hour)
 
-	query := `
+	// 1. 查询已聚合的小时数据（不包含当前小时）
+	hourlyQuery := `
         SELECT bucket_start, requests_total, requests_success, requests_failed,
                response_time_sum_ms, response_time_count
         FROM node_metrics_hourly
@@ -140,7 +144,7 @@ func (s *Store) GetNode24hTrend(ctx context.Context, accountID, nodeID string) (
 
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()
-	rows, err := s.db.QueryContext(ctx, query, accountID, nodeID, from, now)
+	rows, err := s.db.QueryContext(ctx, hourlyQuery, accountID, nodeID, from, currentHourStart)
 	if err != nil {
 		return nil, err
 	}
@@ -159,10 +163,31 @@ func (s *Store) GetNode24hTrend(ctx context.Context, accountID, nodeID string) (
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
+	// 2. 查询当前小时的原始数据并聚合
+	rawQuery := `
+        SELECT SUM(requests_total), SUM(requests_success), SUM(requests_failed),
+               SUM(response_time_sum_ms), SUM(response_time_count)
+        FROM node_metrics_raw
+        WHERE account_id = ? AND node_id = ? AND ts >= ? AND ts < ?
+    `
+
+	var rec MetricsRecord
+	err = s.db.QueryRowContext(ctx, rawQuery, accountID, nodeID, currentHourStart, now).Scan(
+		&rec.RequestsTotal, &rec.RequestsSuccess, &rec.RequestsFailed,
+		&rec.ResponseTimeSumMs, &rec.ResponseTimeCount)
+	if err == nil && rec.RequestsTotal > 0 {
+		rec.AccountID = accountID
+		rec.NodeID = nodeID
+		rec.Timestamp = currentHourStart
+		res = append(res, rec)
+	}
+
 	return res, nil
 }
 
 // GetNodes24hTrend 批量获取多个节点最近 24 小时的趋势数据，结果按 node_id 和时间升序排列。
+// 该函数会同时查询已聚合的小时数据和当前小时的原始数据，确保数据实时性。
 func (s *Store) GetNodes24hTrend(ctx context.Context, accountID string, nodeIDs []string) (map[string][]MetricsRecord, error) {
 	result := make(map[string][]MetricsRecord)
 	if len(nodeIDs) == 0 {
@@ -171,11 +196,14 @@ func (s *Store) GetNodes24hTrend(ctx context.Context, accountID string, nodeIDs 
 	accountID = normalizeAccount(accountID)
 	now := time.Now().UTC()
 	from := now.Add(-24 * time.Hour)
+	// 当前小时的起始时间
+	currentHourStart := now.Truncate(time.Hour)
 
 	placeholders := strings.Repeat("?,", len(nodeIDs))
 	placeholders = strings.TrimSuffix(placeholders, ",")
 
-	query := fmt.Sprintf(`
+	// 1. 查询已聚合的小时数据（不包含当前小时）
+	hourlyQuery := fmt.Sprintf(`
         SELECT node_id, bucket_start, requests_total, requests_success, requests_failed,
                response_time_sum_ms, response_time_count
         FROM node_metrics_hourly
@@ -183,16 +211,16 @@ func (s *Store) GetNodes24hTrend(ctx context.Context, accountID string, nodeIDs 
         ORDER BY node_id ASC, bucket_start ASC
     `, placeholders)
 
-	args := make([]interface{}, 0, len(nodeIDs)+3)
-	args = append(args, accountID)
+	hourlyArgs := make([]interface{}, 0, len(nodeIDs)+3)
+	hourlyArgs = append(hourlyArgs, accountID)
 	for _, id := range nodeIDs {
-		args = append(args, id)
+		hourlyArgs = append(hourlyArgs, id)
 	}
-	args = append(args, from, now)
+	hourlyArgs = append(hourlyArgs, from, currentHourStart)
 
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.db.QueryContext(ctx, hourlyQuery, hourlyArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -211,6 +239,51 @@ func (s *Store) GetNodes24hTrend(ctx context.Context, accountID string, nodeIDs 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+
+	// 2. 查询当前小时的原始数据并聚合
+	rawQuery := fmt.Sprintf(`
+        SELECT node_id,
+               SUM(requests_total) AS requests_total,
+               SUM(requests_success) AS requests_success,
+               SUM(requests_failed) AS requests_failed,
+               SUM(response_time_sum_ms) AS response_time_sum_ms,
+               SUM(response_time_count) AS response_time_count
+        FROM node_metrics_raw
+        WHERE account_id = ? AND node_id IN (%s) AND ts >= ? AND ts < ?
+        GROUP BY node_id
+    `, placeholders)
+
+	rawArgs := make([]interface{}, 0, len(nodeIDs)+3)
+	rawArgs = append(rawArgs, accountID)
+	for _, id := range nodeIDs {
+		rawArgs = append(rawArgs, id)
+	}
+	rawArgs = append(rawArgs, currentHourStart, now)
+
+	rawRows, err := s.db.QueryContext(ctx, rawQuery, rawArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rawRows.Close()
+
+	for rawRows.Next() {
+		var rec MetricsRecord
+		var nodeID string
+		if err := rawRows.Scan(&nodeID, &rec.RequestsTotal, &rec.RequestsSuccess, &rec.RequestsFailed, &rec.ResponseTimeSumMs, &rec.ResponseTimeCount); err != nil {
+			return nil, err
+		}
+		// 只有当有数据时才添加当前小时的记录
+		if rec.RequestsTotal > 0 {
+			rec.AccountID = accountID
+			rec.NodeID = nodeID
+			rec.Timestamp = currentHourStart // 使用当前小时的起始时间作为时间戳
+			result[nodeID] = append(result[nodeID], rec)
+		}
+	}
+	if err := rawRows.Err(); err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
