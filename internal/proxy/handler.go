@@ -94,6 +94,8 @@ func (p *Server) handler() http.Handler {
 	apiMux.HandleFunc("/api/settings", p.requireSession(settingsHandler.ListSettings))
 	apiMux.HandleFunc("/api/settings/batch", p.requireSession(settingsHandler.BatchUpdate))
 	apiMux.HandleFunc("/api/settings/", p.requireSession(settingsHandler.HandleSetting))
+	apiMux.HandleFunc("/api/claude-config/template", p.requireSession(p.handleClaudeConfigTemplate))
+	apiMux.HandleFunc("/api/claude-config/download/", p.handleClaudeConfigDownload)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -146,6 +148,11 @@ func (p *Server) handler() http.Handler {
 		}
 
 		if strings.HasPrefix(path, "/api/settings") {
+			apiMux.ServeHTTP(w, r)
+			return
+		}
+
+		if strings.HasPrefix(path, "/api/claude-config/") {
 			apiMux.ServeHTTP(w, r)
 			return
 		}
@@ -221,7 +228,8 @@ func (p *Server) requireSession(next http.HandlerFunc) http.HandlerFunc {
 			strings.HasPrefix(r.URL.Path, "/api/accounts/") ||
 			strings.HasPrefix(r.URL.Path, "/api/metrics/") ||
 			strings.HasPrefix(r.URL.Path, "/api/monitor/") ||
-			strings.HasPrefix(r.URL.Path, "/api/settings")
+			strings.HasPrefix(r.URL.Path, "/api/settings") ||
+			strings.HasPrefix(r.URL.Path, "/api/claude-config/")
 
 		cookie, err := r.Cookie("session_token")
 		if err != nil || cookie.Value == "" {

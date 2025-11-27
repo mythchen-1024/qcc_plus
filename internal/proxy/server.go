@@ -49,6 +49,9 @@ type Server struct {
 	settingsStopCh   chan struct{}
 	settingsWg       sync.WaitGroup
 
+	claudeConfigCache map[string]claudeConfigEntry
+	claudeConfigMu    sync.RWMutex
+
 	tunnelMgr *tunnel.Manager
 	tunnelMu  sync.Mutex
 

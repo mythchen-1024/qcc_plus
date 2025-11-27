@@ -13,6 +13,7 @@ import TunnelSettings from './pages/TunnelSettings'
 import Notifications from './pages/Notifications'
 import ChangelogPage from './pages/ChangelogPage'
 import SharedMonitor from './pages/SharedMonitor'
+import ClaudeConfig from './pages/ClaudeConfig'
 import { useAuth } from './hooks/useAuth'
 import { NodeMetricsProvider } from './contexts/NodeMetricsContext'
 import { SettingsProvider } from './contexts/SettingsContext'
@@ -72,6 +73,16 @@ export default function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Nodes />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/claude-config"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ClaudeConfig />
                   </Layout>
                 </ProtectedRoute>
               }

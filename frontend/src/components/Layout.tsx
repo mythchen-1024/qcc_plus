@@ -24,6 +24,15 @@ const icons = {
       <path d="M10 13v3.5" />
     </svg>
   ),
+  magic: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m11 2.5-4.8 7.7h3.2L7.8 17.5l6.2-9.7H11l.8-5.3Z" />
+      <path d="m4 15.6 2-2" />
+      <path d="m14.5 5.5 1.5-1.5" />
+      <path d="m5.2 5.8.6-2.3" />
+      <path d="m15 14.2 1.8.3" />
+    </svg>
+  ),
   accounts: (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 10.25a3.25 3.25 0 1 0-3.25-3.25A3.25 3.25 0 0 0 10 10.25Z" />
@@ -130,6 +139,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
 	{ path: '/admin/dashboard', label: '仪表盘', icon: 'dashboard', group: 'core' },
+	{ path: '/admin/claude-config', label: '快速配置', icon: 'magic', group: 'core' },
 	{ path: '/admin/monitor', label: '监控大屏', icon: 'monitor', group: 'core' },
 	{ path: '/admin/nodes', label: '节点管理', icon: 'nodes', group: 'core' },
 	{ path: '/admin/accounts', label: '账号管理', icon: 'accounts', adminOnly: true, group: 'system' },

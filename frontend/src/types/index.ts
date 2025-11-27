@@ -36,6 +36,18 @@ export interface Config {
   health_interval_sec: number;
 }
 
+export interface ClaudeConfigTemplate {
+  proxy_url: string;
+  api_key: string;
+  account_name: string;
+  config_json: string;
+  config_id: string;
+  install_cmd: {
+    unix: string;
+    windows: string;
+  };
+}
+
 export interface TunnelState {
   api_token_set: boolean;
   subdomain: string;

@@ -14,6 +14,7 @@ import type {
   MonitorShare,
   CreateMonitorShareRequest,
   HealthHistory,
+  ClaudeConfigTemplate,
 } from '../types'
 
 const defaultHeaders = { 'Content-Type': 'application/json' }
@@ -398,6 +399,32 @@ async function testNotification(data: TestNotificationRequest): Promise<void> {
   })
 }
 
+type ClaudeTemplateParams = {
+  proxy_url?: string
+  api_key?: string
+  model?: string
+  allow?: string[]
+  deny?: string[]
+}
+
+async function getClaudeConfigTemplate(params?: ClaudeTemplateParams): Promise<ClaudeConfigTemplate> {
+  const search = new URLSearchParams()
+  if (params?.proxy_url) search.set('proxy_url', params.proxy_url)
+  if (params?.api_key) search.set('api_key', params.api_key)
+  if (params?.model) search.set('model', params.model)
+  params?.allow?.forEach((v) => {
+    const val = v.trim()
+    if (val) search.append('allow', val)
+  })
+  params?.deny?.forEach((v) => {
+    const val = v.trim()
+    if (val) search.append('deny', val)
+  })
+  const qs = search.toString()
+  const url = qs ? `/api/claude-config/template?${qs}` : '/api/claude-config/template'
+  return request<ClaudeConfigTemplate>(url)
+}
+
 export default {
   login,
   logout,
@@ -436,4 +463,5 @@ export default {
   deleteNotificationSubscription,
   getEventTypes,
   testNotification,
+  getClaudeConfigTemplate,
 }
