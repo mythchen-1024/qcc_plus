@@ -115,14 +115,16 @@ func (p *Server) handleGetHealthHistory(w http.ResponseWriter, r *http.Request) 
 			offset = n
 		}
 	}
+	source := strings.TrimSpace(r.URL.Query().Get("source"))
 
 	params := store.QueryHealthCheckParams{
-		AccountID: node.AccountID,
-		NodeID:    nodeID,
-		From:      from,
-		To:        to,
-		Limit:     limit,
-		Offset:    offset,
+		AccountID:   node.AccountID,
+		NodeID:      nodeID,
+		From:        from,
+		To:          to,
+		Limit:       limit,
+		Offset:      offset,
+		CheckSource: source,
 	}
 
 	records, err := p.store.QueryHealthChecks(r.Context(), params)
@@ -144,6 +146,7 @@ func (p *Server) handleGetHealthHistory(w http.ResponseWriter, r *http.Request) 
 			"response_time_ms": rec.ResponseTimeMs,
 			"error_message":    rec.ErrorMessage,
 			"check_method":     rec.CheckMethod,
+			"check_source":     rec.CheckSource,
 		})
 	}
 

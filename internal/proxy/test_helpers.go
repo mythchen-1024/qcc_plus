@@ -29,5 +29,5 @@ func (p *Server) TestCheckNodeHealth(id string) {
 	p.mu.RLock()
 	acc := p.nodeAccount[id]
 	p.mu.RUnlock()
-	p.checkNodeHealth(acc, id)
+	p.checkNodeHealth(acc, id, CheckSourceScheduled)
 }

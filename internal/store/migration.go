@@ -174,12 +174,41 @@ func (s *Store) ensureHealthHistoryTable(ctx context.Context) error {
 	  response_time_ms INT,
 	  error_message TEXT,
 	  check_method VARCHAR(20) NOT NULL,
+	  check_source VARCHAR(20) NOT NULL DEFAULT 'scheduled',
 	  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 	  INDEX idx_node_time (node_id, check_time),
-	  INDEX idx_account_node_time (account_id, node_id, check_time)
+	  INDEX idx_account_node_time (account_id, node_id, check_time),
+	  INDEX idx_account_node_source_time (account_id, node_id, check_source, check_time)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
-	_, err := s.db.ExecContext(ctx, stmt)
-	return err
+	if _, err := s.db.ExecContext(ctx, stmt); err != nil {
+		return err
+	}
+
+	hasCheckSource, err := s.columnExists(context.Background(), "health_check_history", "check_source")
+	if err != nil {
+		return err
+	}
+	if !hasCheckSource {
+		alterCtx, cancel := withTimeout(context.Background())
+		defer cancel()
+		if _, err := s.db.ExecContext(alterCtx, `ALTER TABLE health_check_history ADD COLUMN check_source VARCHAR(20) NOT NULL DEFAULT 'scheduled' AFTER check_method`); err != nil {
+			return err
+		}
+	}
+
+	hasIndex, err := s.indexExists(context.Background(), "health_check_history", "idx_account_node_source_time")
+	if err != nil {
+		return err
+	}
+	if !hasIndex {
+		alterCtx, cancel := withTimeout(context.Background())
+		defer cancel()
+		if _, err := s.db.ExecContext(alterCtx, `ALTER TABLE health_check_history ADD INDEX idx_account_node_source_time (account_id, node_id, check_source, check_time)`); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *Store) ensureConfigTable(ctx context.Context) error {
@@ -524,6 +553,23 @@ func (s *Store) columnExists(ctx context.Context, table, column string) (bool, e
 		  AND TABLE_NAME = ?
 		  AND COLUMN_NAME = ?
 	`, table, column)
+	var exists bool
+	if err := row.Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (s *Store) indexExists(ctx context.Context, table, index string) (bool, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+	row := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) > 0
+		FROM information_schema.STATISTICS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = ?
+		  AND INDEX_NAME = ?
+	`, table, index)
 	var exists bool
 	if err := row.Scan(&exists); err != nil {
 		return false, err

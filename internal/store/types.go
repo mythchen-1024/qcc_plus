@@ -48,17 +48,19 @@ type HealthCheckRecord struct {
 	ResponseTimeMs int
 	ErrorMessage   string
 	CheckMethod    string
+	CheckSource    string
 	CreatedAt      time.Time
 }
 
 // QueryHealthCheckParams 查询参数
 type QueryHealthCheckParams struct {
-	AccountID string
-	NodeID    string
-	From      time.Time
-	To        time.Time
-	Limit     int
-	Offset    int
+	AccountID   string
+	NodeID      string
+	From        time.Time
+	To          time.Time
+	Limit       int
+	Offset      int
+	CheckSource string
 }
 
 // MetricsGranularity 描述查询或聚合的时间粒度。

@@ -121,7 +121,7 @@ func (h *HealthScheduler) checkAllNodes() {
 
 		for _, id := range ids {
 			total++
-			p.checkNodeHealth(acc, id)
+			p.checkNodeHealth(acc, id, CheckSourceScheduled)
 		}
 	}
 

@@ -18,6 +18,8 @@ interface HealthTimelineProps {
 	refreshKey?: number
 	latest?: HealthCheckRecord | null
 	shareToken?: string
+	/** 数据来源过滤：scheduled(周期检查)/recovery(故障恢复)/proxy_fail(代理失败)，默认 scheduled */
+	source?: string
 }
 
 function normalizeRecord(nodeId: string, rec: HealthCheckRecord): HealthCheckRecord {
@@ -31,7 +33,7 @@ function normalizeRecord(nodeId: string, rec: HealthCheckRecord): HealthCheckRec
 	}
 }
 
-export default function HealthTimeline({ nodeId, refreshKey = 0, latest, shareToken }: HealthTimelineProps) {
+export default function HealthTimeline({ nodeId, refreshKey = 0, latest, shareToken, source = 'scheduled' }: HealthTimelineProps) {
 	const [range, setRange] = useState<RangeKey>('24h')
 	const [history, setHistory] = useState<HealthHistory | null>(null)
 	const [loading, setLoading] = useState(false)
@@ -49,14 +51,14 @@ export default function HealthTimeline({ nodeId, refreshKey = 0, latest, shareTo
 		const to = now.toISOString()
 		const from = new Date(now.getTime() - RANGE_WINDOWS[range]).toISOString()
 		try {
-			const res = await api.getHealthHistory(nodeId, from, to, shareToken)
+			const res = await api.getHealthHistory(nodeId, from, to, shareToken, source)
 			setHistory(res)
 		} catch (err) {
 			setError((err as Error).message || '加载失败')
 		} finally {
 			setLoading(false)
 		}
-	}, [nodeId, range, shareToken])
+	}, [nodeId, range, shareToken, source])
 
 	useEffect(() => {
 		fetchHistory()

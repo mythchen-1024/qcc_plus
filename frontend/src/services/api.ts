@@ -183,11 +183,13 @@ async function getHealthHistory(
   from?: string,
   to?: string,
   shareToken?: string,
+  source?: string,
 ): Promise<HealthHistory> {
   const params = new URLSearchParams()
   if (from) params.set('from', from)
   if (to) params.set('to', to)
   if (shareToken) params.set('share_token', shareToken)
+  if (source) params.set('source', source)
   const qs = params.toString()
   const url = qs
     ? `/api/nodes/${encodeURIComponent(nodeId)}/health-history?${qs}`

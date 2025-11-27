@@ -23,6 +23,12 @@ const (
 	HealthCheckMethodCLI  = "cli"  // Claude Code CLI 无头模式
 )
 
+const (
+	CheckSourceScheduled = "scheduled"
+	CheckSourceRecovery  = "recovery"
+	CheckSourceProxyFail = "proxy_fail"
+)
+
 // 默认健康检查方式（可被环境变量覆盖）；从 API 变更为 CLI，以便在无 HTTP 端点时也能探活。
 var defaultHealthCheckMethod = HealthCheckMethodCLI
 
@@ -119,14 +125,17 @@ func (p *Server) checkFailedNodes() {
 	p.mu.RUnlock()
 	for _, acc := range accs {
 		for id := range acc.FailedSet {
-			p.checkNodeHealth(acc, id)
+			p.checkNodeHealth(acc, id, CheckSourceRecovery)
 		}
 	}
 }
 
-func (p *Server) checkNodeHealth(acc *Account, id string) {
+func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 	if acc == nil {
 		return
+	}
+	if strings.TrimSpace(source) == "" {
+		source = CheckSourceScheduled
 	}
 
 	now := time.Now()
@@ -179,7 +188,7 @@ func (p *Server) checkNodeHealth(acc *Account, id string) {
 		ok, pingErr, latency = p.healthCheckViaAPI(ctx, nodeCopy)
 	}
 	checkedAt := time.Now().UTC()
-	p.recordHealthEvent(nodeCopy.AccountID, nodeCopy.ID, method, ok, latency, pingErr, checkedAt)
+	p.recordHealthEvent(nodeCopy.AccountID, nodeCopy.ID, method, source, ok, latency, pingErr, checkedAt)
 
 	var (
 		rec           store.NodeRecord
@@ -417,7 +426,7 @@ func (p *Server) healthCheckViaCLI(ctx context.Context, node Node) (bool, string
 	return true, "", latency
 }
 
-func (p *Server) recordHealthEvent(accountID, nodeID, method string, success bool, latency time.Duration, errMsg string, checkTime time.Time) {
+func (p *Server) recordHealthEvent(accountID, nodeID, method, source string, success bool, latency time.Duration, errMsg string, checkTime time.Time) {
 	if p == nil {
 		return
 	}
@@ -426,6 +435,9 @@ func (p *Server) recordHealthEvent(accountID, nodeID, method string, success boo
 	}
 	if accountID == "" {
 		accountID = store.DefaultAccountID
+	}
+	if strings.TrimSpace(source) == "" {
+		source = CheckSourceScheduled
 	}
 	respMs := int(latency.Milliseconds())
 	if respMs < 0 {
@@ -441,6 +453,7 @@ func (p *Server) recordHealthEvent(accountID, nodeID, method string, success boo
 			ResponseTimeMs: respMs,
 			ErrorMessage:   errMsg,
 			CheckMethod:    method,
+			CheckSource:    source,
 		}
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -457,6 +470,7 @@ func (p *Server) recordHealthEvent(accountID, nodeID, method string, success boo
 			"response_time_ms": respMs,
 			"error_message":    errMsg,
 			"check_method":     method,
+			"check_source":     source,
 		}
 		p.wsHub.Broadcast(accountID, "health_check", payload)
 	}

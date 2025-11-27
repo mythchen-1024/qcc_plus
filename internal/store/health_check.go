@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -20,6 +21,9 @@ func (s *Store) InsertHealthCheck(ctx context.Context, record *HealthCheckRecord
 	record.AccountID = normalizeAccount(record.AccountID)
 	if record.CheckMethod == "" {
 		record.CheckMethod = "api"
+	}
+	if strings.TrimSpace(record.CheckSource) == "" {
+		record.CheckSource = "scheduled"
 	}
 	if record.CheckTime.IsZero() {
 		record.CheckTime = time.Now().UTC()
@@ -42,9 +46,9 @@ func (s *Store) InsertHealthCheck(ctx context.Context, record *HealthCheckRecord
 	}
 
 	_, err := s.db.ExecContext(ctx, `INSERT INTO health_check_history (
-		account_id, node_id, check_time, success, response_time_ms, error_message, check_method, created_at)
-		VALUES (?,?,?,?,?,?,?,?)`,
-		record.AccountID, record.NodeID, record.CheckTime, record.Success, resp, record.ErrorMessage, record.CheckMethod, record.CreatedAt)
+		account_id, node_id, check_time, success, response_time_ms, error_message, check_method, check_source, created_at)
+		VALUES (?,?,?,?,?,?,?,?,?)`,
+		record.AccountID, record.NodeID, record.CheckTime, record.Success, resp, record.ErrorMessage, record.CheckMethod, record.CheckSource, record.CreatedAt)
 	return err
 }
 
@@ -84,16 +88,26 @@ func (s *Store) QueryHealthChecks(ctx context.Context, params QueryHealthCheckPa
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()
 	// 使用子查询：先用 DESC 取最新的 N 条，再用 ASC 排序返回（正序显示）
-	rows, err := s.db.QueryContext(ctx, `SELECT id, account_id, node_id, check_time, success, response_time_ms, error_message, check_method, created_at
+	conds := []string{"account_id=?", "node_id=?", "check_time >= ?", "check_time <= ?"}
+	args := []interface{}{params.AccountID, params.NodeID, params.From, params.To}
+	if params.CheckSource != "" {
+		conds = append(conds, "check_source=?")
+		args = append(args, params.CheckSource)
+	}
+	where := strings.Join(conds, " AND ")
+
+	query := `SELECT id, account_id, node_id, check_time, success, response_time_ms, error_message, check_method, check_source, created_at
 		FROM (
-			SELECT id, account_id, node_id, check_time, success, response_time_ms, error_message, check_method, created_at
+			SELECT id, account_id, node_id, check_time, success, response_time_ms, error_message, check_method, check_source, created_at
 			FROM health_check_history
-			WHERE account_id=? AND node_id=? AND check_time >= ? AND check_time <= ?
+			WHERE ` + where + `
 			ORDER BY check_time DESC
 			LIMIT ? OFFSET ?
 		) AS latest
-		ORDER BY check_time ASC`,
-		params.AccountID, params.NodeID, params.From, params.To, limit, offset)
+		ORDER BY check_time ASC`
+	args = append(args, limit, offset)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +117,7 @@ func (s *Store) QueryHealthChecks(ctx context.Context, params QueryHealthCheckPa
 	for rows.Next() {
 		var rec HealthCheckRecord
 		var resp sql.NullInt64
-		if err := rows.Scan(&rec.ID, &rec.AccountID, &rec.NodeID, &rec.CheckTime, &rec.Success, &resp, &rec.ErrorMessage, &rec.CheckMethod, &rec.CreatedAt); err != nil {
+		if err := rows.Scan(&rec.ID, &rec.AccountID, &rec.NodeID, &rec.CheckTime, &rec.Success, &resp, &rec.ErrorMessage, &rec.CheckMethod, &rec.CheckSource, &rec.CreatedAt); err != nil {
 			return nil, err
 		}
 		if resp.Valid {
@@ -137,8 +151,15 @@ func (s *Store) CountHealthChecks(ctx context.Context, params QueryHealthCheckPa
 
 	ctx, cancel := withTimeout(ctx)
 	defer cancel()
-	row := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM health_check_history WHERE account_id=? AND node_id=? AND check_time >= ? AND check_time <= ?`,
-		params.AccountID, params.NodeID, params.From, params.To)
+	conds := []string{"account_id=?", "node_id=?", "check_time >= ?", "check_time <= ?"}
+	args := []interface{}{params.AccountID, params.NodeID, params.From, params.To}
+	if params.CheckSource != "" {
+		conds = append(conds, "check_source=?")
+		args = append(args, params.CheckSource)
+	}
+	where := strings.Join(conds, " AND ")
+
+	row := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM health_check_history WHERE `+where, args...)
 	var total int64
 	if err := row.Scan(&total); err != nil {
 		return 0, err
