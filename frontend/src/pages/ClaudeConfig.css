@@ -1,8 +1,20 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .claude-config-page {
   display: flex;
   flex-direction: column;
   gap: 12px;
   color: var(--color-text-primary);
+  animation: fadeIn 0.6s ease-out;
 }
 
 .claude-config-header {
@@ -10,6 +22,20 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+}
+
+.claude-config-header h1 {
+  font-size: var(--font-size-page-title);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 4px 0;
+  color: var(--color-text-primary);
+}
+
+.claude-config-header .sub {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-subtitle);
+  margin: 0 0 8px;
+  font-weight: 300;
 }
 
 .header-actions {
@@ -45,6 +71,32 @@
   color: #e2e8f0;
 }
 
+.btn {
+  padding: var(--button-padding-y) var(--button-padding-x);
+  height: var(--button-height);
+  border-radius: var(--button-radius);
+  font-size: var(--button-typography-size);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn.small {
+  padding: 4px 10px;
+  height: auto;
+  font-size: var(--font-size-small);
+}
+
+.btn.large {
+  padding: 10px 20px;
+  height: auto;
+  font-size: var(--font-size-body);
+}
+
 .btn.primary {
   background: var(--color-primary);
   color: var(--color-text-inverse);
@@ -69,9 +121,17 @@
   color: var(--color-text-secondary);
 }
 
+.btn.ghost:hover:not(:disabled) {
+  background: var(--color-hover);
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
+}
+
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  transform: none !important;
 }
 
 .install-card.is-dark {
@@ -90,9 +150,13 @@
 
 .eyebrow {
   font-size: 12px;
-  color: #cbd5e1;
+  color: var(--color-text-secondary);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.install-card .eyebrow {
+  color: #cbd5e1;
 }
 
 .install-card .title-line {
