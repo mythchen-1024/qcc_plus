@@ -227,7 +227,7 @@ pnpm dev
 - [监控数据持久化](docs/monitoring-data-persistence.md) - 多维度监控数据聚合与持久化
 - [GoReleaser 自动化发布](docs/goreleaser-guide.md) - 一键发布流程（开发者必读）⭐
 - [Docker Hub 发布](docs/docker-hub-publish.md) - 镜像发布流程（手动模式，已弃用）
-- [飞牛 NAS 部署指南](https://p.kdocs.cn/s/PNCAUCBEABAES) ⭐ - 飞牛 NAS Docker 部署教程（外部文档）
+- [飞牛 NAS 部署指南](https://p.kdocs.cn/s/PNCAUCBEABAES) ⭐ - 飞牛 NAS Docker 部署教程（感谢 [@circircir-circle](https://github.com/circircir-circle) 贡献）
 - [文档索引](docs/README.md) - 所有文档导航
 - [项目记忆](CLAUDE.md) - 开发规范和工作流程
 
