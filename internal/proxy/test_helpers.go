@@ -1,6 +1,9 @@
 package proxy
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // TestSetCLIRunner 覆盖 CLI 健康检查执行器（仅用于测试）。
 func (p *Server) TestSetCLIRunner(r CliRunner) {
@@ -29,5 +32,5 @@ func (p *Server) TestCheckNodeHealth(id string) {
 	p.mu.RLock()
 	acc := p.nodeAccount[id]
 	p.mu.RUnlock()
-	p.checkNodeHealth(acc, id, CheckSourceScheduled)
+	p.checkNodeHealth(context.Background(), acc, id, CheckSourceScheduled)
 }

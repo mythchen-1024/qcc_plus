@@ -1,12 +1,23 @@
 package proxy
 
 import (
+	"context"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 const defaultHealthAllInterval = 5 * time.Minute
+const defaultHealthWorkers = 16
+const maxHealthWorkers = 256
+const defaultHealthRoundTimeout = 60 * time.Second
+
+// healthTask 描述一次健康检查任务。
+type healthTask struct {
+	acc    *Account
+	nodeID string
+}
 
 // HealthScheduler 定期探活所有节点（包括健康节点），避免状态盲区。
 type HealthScheduler struct {
@@ -99,10 +110,12 @@ func (h *HealthScheduler) checkAllNodes() {
 	}
 
 	start := time.Now()
-	h.logger.Printf("[HealthScheduler] checking all nodes...")
+	logger := h.logger
+	logger.Printf("[HealthScheduler] checking all nodes...")
 
 	p := h.server
 
+	// 收集任务列表，避免长时间持有锁。
 	p.mu.RLock()
 	accs := make([]*Account, 0, len(p.accountByID))
 	for _, acc := range p.accountByID {
@@ -110,22 +123,96 @@ func (h *HealthScheduler) checkAllNodes() {
 	}
 	p.mu.RUnlock()
 
-	total := 0
+	tasks := make([]healthTask, 0, 32)
 	for _, acc := range accs {
 		p.mu.RLock()
-		ids := make([]string, 0, len(acc.Nodes))
+		if len(acc.Nodes) == 0 {
+			p.mu.RUnlock()
+			continue
+		}
 		for id := range acc.Nodes {
-			ids = append(ids, id)
+			tasks = append(tasks, healthTask{acc: acc, nodeID: id})
 		}
 		p.mu.RUnlock()
-
-		for _, id := range ids {
-			total++
-			p.checkNodeHealth(acc, id, CheckSourceScheduled)
-		}
 	}
 
-	h.logger.Printf("[HealthScheduler] full health check finished in %v (nodes=%d)", time.Since(start), total)
+	if len(tasks) == 0 {
+		logger.Printf("[HealthScheduler] skip full health check: no nodes")
+		return
+	}
+
+	workers := p.getHealthWorkers()
+	if workers > len(tasks) {
+		workers = len(tasks)
+	}
+	if workers <= 0 {
+		workers = defaultHealthWorkers
+	}
+	roundTimeout := p.getHealthRoundTimeout()
+	roundCtx, cancel := context.WithTimeout(context.Background(), roundTimeout)
+	defer cancel()
+
+	taskCh := make(chan healthTask, len(tasks))
+	var (
+		wg      sync.WaitGroup
+		success uint32
+		fail    uint32
+	)
+
+	for i := 0; i < workers; i++ {
+		go h.healthWorker(roundCtx, i, taskCh, &wg, &success, &fail)
+	}
+
+	for _, t := range tasks {
+		if roundCtx.Err() != nil {
+			break
+		}
+		wg.Add(1)
+		taskCh <- t
+	}
+	close(taskCh)
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.Printf("[HealthScheduler] full health check finished in %v (nodes=%d success=%d fail=%d workers=%d)", time.Since(start), len(tasks), atomic.LoadUint32(&success), atomic.LoadUint32(&fail), workers)
+	case <-roundCtx.Done():
+		logger.Printf("[HealthScheduler] full health check timeout after %v (elapsed=%v nodes=%d success=%d fail=%d workers=%d)", roundTimeout, time.Since(start), len(tasks), atomic.LoadUint32(&success), atomic.LoadUint32(&fail), workers)
+	}
+}
+
+// healthWorker 消费任务队列并执行健康检查，支持上下文取消与 panic 恢复。
+func (h *HealthScheduler) healthWorker(ctx context.Context, id int, tasks <-chan healthTask, wg *sync.WaitGroup, success, fail *uint32) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Printf("[HealthScheduler] worker %d panic: %v", id, r)
+		}
+	}()
+
+	for task := range tasks {
+		select {
+		case <-ctx.Done():
+			wg.Done()
+			continue
+		default:
+		}
+
+		ok, errMsg := h.server.checkNodeHealth(ctx, task.acc, task.nodeID, CheckSourceScheduled)
+		if ok {
+			atomic.AddUint32(success, 1)
+		} else {
+			atomic.AddUint32(fail, 1)
+			if errMsg != "" {
+				h.logger.Printf("[HealthScheduler] worker %d node %s failed: %s", id, task.nodeID, errMsg)
+			}
+		}
+		wg.Done()
+	}
 }
 
 // recoverPanic 防止调度器因 panic 退出。

@@ -125,18 +125,31 @@ func (p *Server) checkFailedNodes() {
 	p.mu.RUnlock()
 	for _, acc := range accs {
 		for id := range acc.FailedSet {
-			p.checkNodeHealth(acc, id, CheckSourceRecovery)
+			p.checkNodeHealth(context.Background(), acc, id, CheckSourceRecovery)
 		}
 	}
 }
 
-func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
+func (p *Server) checkNodeHealth(ctx context.Context, acc *Account, id string, source string) (ok bool, pingErr string) {
 	if acc == nil {
-		return
+		return false, "account not found"
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 	if strings.TrimSpace(source) == "" {
 		source = CheckSourceScheduled
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			p.logger.Printf("[HealthCheck] panic recovered for node %s: %v", id, r)
+			ok = false
+			if pingErr == "" {
+				pingErr = fmt.Sprintf("panic: %v", r)
+			}
+		}
+	}()
 
 	now := time.Now()
 
@@ -145,7 +158,7 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 	node := acc.Nodes[id]
 	if node == nil {
 		p.mu.RUnlock()
-		return
+		return false, "node not found"
 	}
 	nodeCopy := *node
 	p.mu.RUnlock()
@@ -167,25 +180,23 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 		timeout = 15 * time.Second
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	nodeCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	var (
-		ok      bool
-		pingErr string
 		latency time.Duration
 	)
 
 	switch method {
 	case HealthCheckMethodAPI:
-		ok, pingErr, latency = p.healthCheckViaAPI(ctx, nodeCopy)
+		ok, pingErr, latency = p.healthCheckViaAPI(nodeCtx, nodeCopy)
 	case HealthCheckMethodHEAD:
-		ok, pingErr, latency = p.healthCheckViaHEAD(ctx, nodeCopy)
+		ok, pingErr, latency = p.healthCheckViaHEAD(nodeCtx, nodeCopy)
 	case HealthCheckMethodCLI:
-		ok, pingErr, latency = p.healthCheckViaCLI(ctx, nodeCopy)
+		ok, pingErr, latency = p.healthCheckViaCLI(nodeCtx, nodeCopy)
 		// 不再自动降级，保留 CLI 失败的真实错误信息，便于调试
 	default:
-		ok, pingErr, latency = p.healthCheckViaAPI(ctx, nodeCopy)
+		ok, pingErr, latency = p.healthCheckViaAPI(nodeCtx, nodeCopy)
 	}
 	checkedAt := time.Now().UTC()
 	p.recordHealthEvent(nodeCopy.AccountID, nodeCopy.ID, method, source, ok, latency, pingErr, checkedAt)
@@ -299,6 +310,8 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 			"timestamp": timestamp,
 		})
 	}
+
+	return ok, pingErr
 }
 
 func (p *Server) maybePromoteRecovered(n *Node) {
