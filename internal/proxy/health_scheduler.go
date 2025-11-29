@@ -2,13 +2,15 @@ package proxy
 
 import (
 	"log"
+	"runtime"
 	"sync"
 	"time"
 )
 
 const (
-	defaultHealthAllInterval      = 10 * time.Minute
-	defaultHealthCheckConcurrency = 10
+	defaultHealthAllInterval = 10 * time.Minute
+	// 默认并发 2：兼顾 2 核 / 2GB 小机型，避免同时拉起过多 CLI 进程导致 OOM。
+	defaultHealthCheckConcurrency = 2
 )
 
 // HealthScheduler 定期探活所有节点（包括健康节点），避免状态盲区。
@@ -30,9 +32,7 @@ func NewHealthScheduler(server *Server, interval time.Duration, workers int, log
 	if interval <= 0 {
 		interval = defaultHealthAllInterval
 	}
-	if workers <= 0 {
-		workers = defaultHealthCheckConcurrency
-	}
+	workers = normalizeHealthCheckWorkers(workers, logger)
 	return &HealthScheduler{
 		server:   server,
 		logger:   logger,
@@ -40,6 +40,37 @@ func NewHealthScheduler(server *Server, interval time.Duration, workers int, log
 		interval: interval,
 		workers:  workers,
 	}
+}
+
+// normalizeHealthCheckWorkers 限制健康检查的并发度，避免在小规格机器上把 CLI 健康检查同时拉起过多进程。
+// 策略：
+//  1. 默认值 fallback 到 defaultHealthCheckConcurrency（2）。
+//  2. 上限 = min(4, runtime.NumCPU()*2)。在 2C 机器上最大 4，默认 2；在 1C 上最大 2。
+//  3. 低于 1 时修正为 1。
+func normalizeHealthCheckWorkers(workers int, logger *log.Logger) int {
+	if workers <= 0 {
+		workers = defaultHealthCheckConcurrency
+	}
+
+	max := runtime.NumCPU() * 2
+	if max > 4 {
+		max = 4
+	}
+	if max < 1 {
+		max = 1
+	}
+
+	if workers > max {
+		if logger != nil {
+			logger.Printf("[HealthScheduler] reduce health check concurrency from %d to %d to protect low-resource host", workers, max)
+		}
+		workers = max
+	}
+
+	if workers < 1 {
+		workers = 1
+	}
+	return workers
 }
 
 // Start 启动定时全量健康检查。

@@ -242,6 +242,7 @@ func (b *Builder) Build() (*Server, error) {
 			}
 		}
 	}
+	healthCheckConcurrency = normalizeHealthCheckWorkers(healthCheckConcurrency, logger)
 	healthRT := transport
 	transport = &retryTransport{base: transport, attempts: b.retries, logger: logger}
 
