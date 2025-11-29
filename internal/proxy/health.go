@@ -47,46 +47,51 @@ func (p *Server) handleFailure(nodeID string, errMsg string) {
 		return
 	}
 	acc := p.nodeAccount[nodeID]
-	failLimit := 3
-	if acc != nil && acc.Config.FailLimit > 0 {
-		failLimit = acc.Config.FailLimit
-	}
 	node.LastError = errMsg
-	failed := node.Metrics.FailStreak >= int64(failLimit)
+	if node.Metrics.FailStreak == 0 {
+		node.Metrics.FailStreak = 1
+	}
+	node.Failed = true
+	if acc != nil {
+		acc.FailedSet[nodeID] = struct{}{}
+	}
+
+	var rec store.NodeRecord
+	if p.store != nil {
+		rec = toRecord(node)
+	}
 	failStreak := node.Metrics.FailStreak
 	nodeName := node.Name
-	if failed {
-		node.Failed = true
-		if acc != nil {
-			acc.FailedSet[nodeID] = struct{}{}
-		}
-	}
 	p.mu.Unlock()
 
-	if failed {
-		p.logger.Printf("node %s marked failed: %s", nodeName, errMsg)
-		if p.notifyMgr != nil && acc != nil {
-			p.notifyMgr.Publish(notify.Event{
-				AccountID:  acc.ID,
-				EventType:  notify.EventNodeFailed,
-				Title:      "节点故障告警",
-				Content:    fmt.Sprintf("**节点名称**: %s\n**错误信息**: %s\n**失败次数**: %d\n**时间**: %s", nodeName, errMsg, failStreak, timeutil.FormatBeijingTime(time.Now())),
-				DedupKey:   node.ID,
-				OccurredAt: time.Now(),
-			})
-		}
-		// 向该账号所有 WebSocket 连接推送离线事件。
-		if p.wsHub != nil && acc != nil {
-			p.wsHub.Broadcast(acc.ID, "node_status", map[string]interface{}{
-				"node_id":   nodeID,
-				"node_name": nodeName,
-				"status":    "offline",
-				"error":     errMsg,
-				"timestamp": timeutil.FormatBeijingTime(time.Now()),
-			})
-		}
-		p.selectBestAndActivate(acc, "节点故障")
+	if p.store != nil {
+		// 同步持久化，确保状态一致
+		_ = p.store.UpsertNode(context.Background(), rec)
 	}
+
+	p.logger.Printf("node %s marked failed immediately: %s", nodeName, errMsg)
+	if p.notifyMgr != nil && acc != nil {
+		p.notifyMgr.Publish(notify.Event{
+			AccountID:  acc.ID,
+			EventType:  notify.EventNodeFailed,
+			Title:      "节点故障告警",
+			Content:    fmt.Sprintf("**节点名称**: %s\n**错误信息**: %s\n**失败次数**: %d\n**时间**: %s", nodeName, errMsg, failStreak, timeutil.FormatBeijingTime(time.Now())),
+			DedupKey:   node.ID,
+			OccurredAt: time.Now(),
+		})
+	}
+	// 向该账号所有 WebSocket 连接推送离线事件。
+	if p.wsHub != nil && acc != nil {
+		p.wsHub.Broadcast(acc.ID, "node_status", map[string]interface{}{
+			"node_id":   nodeID,
+			"node_name": nodeName,
+			"status":    "offline",
+			"error":     errMsg,
+			"timestamp": timeutil.FormatBeijingTime(time.Now()),
+		})
+	}
+	// 立即触发节点切换，避免继续使用故障节点
+	p.selectBestAndActivate(acc, "节点故障")
 }
 
 // 定时探活失败节点。
@@ -127,7 +132,13 @@ func (p *Server) checkFailedNodes() {
 	}
 	p.mu.RUnlock()
 	for _, acc := range accs {
+		p.mu.RLock()
+		ids := make([]string, 0, len(acc.FailedSet))
 		for id := range acc.FailedSet {
+			ids = append(ids, id)
+		}
+		p.mu.RUnlock()
+		for _, id := range ids {
 			p.checkNodeHealth(acc, id, CheckSourceRecovery)
 		}
 	}
@@ -227,16 +238,22 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 				rec = toRecord(n)
 				shouldPersist = true
 			}
-		} else if pingErr != "" {
+		} else {
 			n.Metrics.LastPingErr = pingErr
+			n.LastError = pingErr
+			n.Failed = true
+			if n.Metrics.FailStreak == 0 {
+				n.Metrics.FailStreak = 1
+			}
+			if acc != nil {
+				acc.FailedSet[id] = struct{}{}
+			}
 			if p.store != nil {
 				rec = toRecord(n)
 				shouldPersist = true
 			}
 			// 如果是当前活跃节点且健康检查失败，立即触发节点切换
 			if acc != nil && id == acc.ActiveID {
-				// 将节点加入失败集合，触发重选
-				acc.FailedSet[id] = struct{}{}
 				// 异步触发节点切换（避免死锁，因为当前持有 p.mu 锁）
 				go func(account *Account, reason string) {
 					p.selectBestAndActivate(account, reason)
@@ -273,6 +290,10 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 		metricsSnapshot = n.Metrics
 	}
 	p.mu.Unlock()
+
+	if !ok && hasNode {
+		p.logger.Printf("health check failed for node %s: %s", nodeName, pingErr)
+	}
 	if shouldPersist {
 		_ = p.store.UpsertNode(context.Background(), rec)
 	}

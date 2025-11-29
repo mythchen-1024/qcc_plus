@@ -259,6 +259,15 @@ func (p *Server) getActiveNode(acc ...*Account) (*Node, error) {
 	return p.getActiveNodeForAccount(p.defaultAccount)
 }
 
+// isInFailedSet 判断节点是否在失败集合中。调用方需确保并发安全（外部加锁或只读场景）。
+func (p *Server) isInFailedSet(acc *Account, nodeID string) bool {
+	if acc == nil {
+		return false
+	}
+	_, ok := acc.FailedSet[nodeID]
+	return ok
+}
+
 // 选择最低权重（最高优先级）的健康节点并激活。
 func (p *Server) selectBestAndActivate(acc *Account, reason ...string) (*Node, error) {
 	if acc == nil {
@@ -275,7 +284,7 @@ func (p *Server) selectBestAndActivate(acc *Account, reason ...string) (*Node, e
 	bestID := ""
 	var bestNode *Node
 	for id, n := range acc.Nodes {
-		if n.Failed || n.Disabled {
+		if n.Failed || n.Disabled || p.isInFailedSet(acc, id) {
 			continue
 		}
 		if bestNode == nil || n.Weight < bestNode.Weight || (n.Weight == bestNode.Weight && n.CreatedAt.Before(bestNode.CreatedAt)) {

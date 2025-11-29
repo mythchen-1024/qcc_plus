@@ -6,6 +6,23 @@
 
 ## [Unreleased]
 
+## [1.7.3] - 2025-11-30
+
+### 修复
+- **🔴 紧急修复：节点故障切换机制重大缺陷**
+  - 修复请求失败后节点未立即下线的问题（首次失败立即标记 Failed=true）
+  - 修复健康检查失败后节点未标记失败状态的问题（所有失败节点加入 FailedSet）
+  - 修复失败状态未及时持久化到数据库的问题（同步调用 UpsertNode）
+  - 修复节点选择逻辑未检查 FailedSet 的问题（添加 isInFailedSet 检查）
+  - 修复并发访问 FailedSet 的竞态条件（先复制 key 列表再迭代）
+  - 生产日志验证：节点标记失败后仍持续使用 3+ 分钟，现已修复为立即切换
+
+### 技术细节
+- `handleFailure`: 首次失败立即标记并持久化，触发切换
+- `checkNodeHealth`: 健康检查失败立即设置 Failed=true，所有失败节点加入 FailedSet
+- `checkFailedNodes`: 消除并发竞态，先复制 key 列表再迭代
+- `selectBestAndActivate`: 同时检查 Failed/Disabled/FailedSet，防止选到故障节点
+
 ## [1.7.2] - 2025-11-29
 
 ### 新增
