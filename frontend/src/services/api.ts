@@ -134,6 +134,7 @@ async function createNode(payload: {
 	api_key?: string
 	weight?: number
 	health_check_method?: Node['health_check_method']
+	health_check_model?: string
 }, accountId?: string): Promise<string> {
 	const data = await request<{ id: string }>(withAccount('/admin/api/nodes', accountId), {
 		method: 'POST',
@@ -143,7 +144,7 @@ async function createNode(payload: {
 	return data.id
 }
 
-async function updateNode(id: string, payload: Partial<Pick<Node, 'name' | 'base_url' | 'weight' | 'health_check_method'>> & { api_key?: string }): Promise<void> {
+async function updateNode(id: string, payload: Partial<Pick<Node, 'name' | 'base_url' | 'weight' | 'health_check_method' | 'health_check_model'>> & { api_key?: string }): Promise<void> {
 	await request(`/admin/api/nodes?id=${encodeURIComponent(id)}`, {
 		method: 'PUT',
 		headers: defaultHeaders,

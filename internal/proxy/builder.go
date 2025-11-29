@@ -416,14 +416,20 @@ func (b *Builder) Build() (*Server, error) {
 			FailedSet:   make(map[string]struct{}),
 		}
 
+		method := normalizeHealthCheckMethod(defaultHealthCheckMethod)
+		if healthMethodRequiresAPIKey(method) && b.upstreamKey == "" {
+			method = HealthCheckMethodHEAD
+		}
 		node := &Node{
-			ID:        "default",
-			Name:      b.upstreamName,
-			URL:       parsed,
-			APIKey:    b.upstreamKey,
-			AccountID: defaultAccount.ID,
-			CreatedAt: time.Now(),
-			Weight:    1,
+			ID:                "default",
+			Name:              b.upstreamName,
+			URL:               parsed,
+			APIKey:            b.upstreamKey,
+			HealthCheckMethod: method,
+			HealthCheckModel:  defaultHealthCheckModel,
+			AccountID:         defaultAccount.ID,
+			CreatedAt:         time.Now(),
+			Weight:            1,
 		}
 		defaultAccount.Nodes[node.ID] = node
 		defaultAccount.ActiveID = node.ID

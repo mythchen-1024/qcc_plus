@@ -23,6 +23,9 @@ const (
 	HealthCheckMethodCLI  = "cli"  // Claude Code CLI 无头模式
 )
 
+// 默认 CLI 健康检查模型（低成本）。
+const defaultHealthCheckModel = "claude-haiku-4-5-20251001"
+
 const (
 	CheckSourceScheduled = "scheduled"
 	CheckSourceRecovery  = "recovery"
@@ -407,6 +410,11 @@ func (p *Server) healthCheckViaCLI(ctx context.Context, node Node) (bool, string
 	if node.URL == nil {
 		return false, "cli health check requires valid base url", 0
 	}
+
+	model := node.HealthCheckModel
+	if model == "" {
+		model = defaultHealthCheckModel
+	}
 	env := map[string]string{
 		"ANTHROPIC_API_KEY":    node.APIKey,
 		"ANTHROPIC_AUTH_TOKEN": chooseNonEmpty(os.Getenv("ANTHROPIC_AUTH_TOKEN"), node.APIKey),
@@ -414,7 +422,7 @@ func (p *Server) healthCheckViaCLI(ctx context.Context, node Node) (bool, string
 	}
 
 	start := time.Now()
-	out, err := runner(ctx, "claude", env, "hi")
+	out, err := runner(ctx, "claude", env, "hi", model)
 	latency := time.Since(start)
 	if err != nil {
 		// 不再返回 fallback 标志，直接返回错误
@@ -476,15 +484,20 @@ func (p *Server) recordHealthEvent(accountID, nodeID, method, source string, suc
 	}
 }
 
-type CliRunner func(ctx context.Context, image string, env map[string]string, prompt string) (string, error)
+type CliRunner func(ctx context.Context, image string, env map[string]string, prompt string, model string) (string, error)
 
-func defaultCLIRunner(ctx context.Context, image string, env map[string]string, prompt string) (string, error) {
+func defaultCLIRunner(ctx context.Context, image string, env map[string]string, prompt string, model string) (string, error) {
 	// image 参数保留以兼容旧接口（当前直接调用本地 claude CLI）。
 	_ = image
 
 	// 使用 -p/--print 来获取非交互式输出
 	// 超时通过 context 控制（在 healthCheckViaCLI 中设置）
 	args := []string{"-p", prompt}
+
+	// 如果指定了模型，添加 --model 参数
+	if model != "" {
+		args = append(args, "--model", model)
+	}
 	cmd := exec.CommandContext(ctx, "claude", args...)
 
 	cmdEnv := os.Environ()

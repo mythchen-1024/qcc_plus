@@ -56,12 +56,13 @@ func (p *Server) handleNodes(w http.ResponseWriter, r *http.Request) {
 			Name              string  `json:"name"`
 			Weight            int     `json:"weight"`
 			HealthCheckMethod *string `json:"health_check_method"`
+			HealthCheckModel  *string `json:"health_check_model"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
 			return
 		}
-		if err := p.updateNode(id, req.Name, req.BaseURL, req.APIKey, req.Weight, req.HealthCheckMethod); err != nil {
+		if err := p.updateNode(id, req.Name, req.BaseURL, req.APIKey, req.Weight, req.HealthCheckMethod, req.HealthCheckModel); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
@@ -93,12 +94,13 @@ func (p *Server) handleNodes(w http.ResponseWriter, r *http.Request) {
 			Name              string `json:"name"`
 			Weight            int    `json:"weight"`
 			HealthCheckMethod string `json:"health_check_method"`
+			HealthCheckModel  string `json:"health_check_model"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
 			return
 		}
-		node, err := p.addNodeWithMethod(acc, req.Name, req.BaseURL, req.APIKey, req.Weight, req.HealthCheckMethod)
+		node, err := p.addNodeWithMethod(acc, req.Name, req.BaseURL, req.APIKey, req.Weight, req.HealthCheckMethod, req.HealthCheckModel)
 		if err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
@@ -146,6 +148,7 @@ func (p *Server) listNodes(acc *Account) []map[string]interface{} {
 				"name":                  n.Name,
 				"base_url":              n.URL.String(),
 				"health_check_method":   healthMethod,
+				"health_check_model":    chooseNonEmpty(n.HealthCheckModel, defaultHealthCheckModel),
 				"active":                id == acc.ActiveID,
 				"has_api_key":           n.APIKey != "",
 				"created_at":            timeutil.FormatBeijingTime(n.CreatedAt),

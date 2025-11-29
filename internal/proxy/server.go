@@ -206,6 +206,7 @@ func (p *Server) createDefaultAccount(defaultUpstream *url.URL, defaultCfg store
 		URL:               defaultUpstream,
 		APIKey:            upstreamKey,
 		HealthCheckMethod: method,
+		HealthCheckModel:  defaultHealthCheckModel,
 		AccountID:         acc.ID,
 		CreatedAt:         time.Now(),
 		Weight:            1,
@@ -217,7 +218,7 @@ func (p *Server) createDefaultAccount(defaultUpstream *url.URL, defaultCfg store
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = p.store.CreateAccount(ctx, store.AccountRecord{ID: acc.ID, Name: acc.Name, Password: acc.Password, ProxyAPIKey: acc.ProxyAPIKey, IsAdmin: true, CreatedAt: node.CreatedAt, UpdatedAt: node.CreatedAt})
-		_ = p.store.UpsertNode(ctx, store.NodeRecord{ID: node.ID, Name: node.Name, BaseURL: node.URL.String(), APIKey: node.APIKey, HealthCheckMethod: node.HealthCheckMethod, AccountID: acc.ID, Weight: node.Weight, CreatedAt: node.CreatedAt})
+		_ = p.store.UpsertNode(ctx, store.NodeRecord{ID: node.ID, Name: node.Name, BaseURL: node.URL.String(), APIKey: node.APIKey, HealthCheckMethod: node.HealthCheckMethod, HealthCheckModel: node.HealthCheckModel, AccountID: acc.ID, Weight: node.Weight, CreatedAt: node.CreatedAt})
 		_ = p.store.SetActive(ctx, acc.ID, node.ID)
 		_ = p.store.UpdateConfig(ctx, acc.ID, defaultCfg, node.ID)
 	}
@@ -290,18 +291,20 @@ func (p *Server) loadAccountsFromStore(defaultUpstream *url.URL, defaultCfg stor
 				URL:               defaultUpstream,
 				APIKey:            defaultUpstreamKey,
 				HealthCheckMethod: method,
+				HealthCheckModel:  defaultHealthCheckModel,
 				AccountID:         acc.ID,
 				CreatedAt:         time.Now(),
 				Weight:            1,
 			}
 			acc.Nodes[node.ID] = node
 			acc.ActiveID = node.ID
-			_ = p.store.UpsertNode(context.Background(), store.NodeRecord{ID: node.ID, Name: node.Name, BaseURL: node.URL.String(), HealthCheckMethod: node.HealthCheckMethod, AccountID: acc.ID, Weight: node.Weight, CreatedAt: node.CreatedAt})
+			_ = p.store.UpsertNode(context.Background(), store.NodeRecord{ID: node.ID, Name: node.Name, BaseURL: node.URL.String(), HealthCheckMethod: node.HealthCheckMethod, HealthCheckModel: node.HealthCheckModel, AccountID: acc.ID, Weight: node.Weight, CreatedAt: node.CreatedAt})
 			_ = p.store.SetActive(context.Background(), acc.ID, node.ID)
 		} else {
 			for _, r := range recs {
 				u, _ := url.Parse(r.BaseURL)
 				hcMethod := normalizeHealthCheckMethod(chooseNonEmpty(r.HealthCheckMethod, defaultHealthCheckMethod))
+				hcModel := chooseNonEmpty(r.HealthCheckModel, defaultHealthCheckModel)
 				if healthMethodRequiresAPIKey(hcMethod) && r.APIKey == "" {
 					p.logger.Printf("health check mode %s requires api key, fallback to head for node %s", hcMethod, r.Name)
 					hcMethod = HealthCheckMethodHEAD
@@ -312,6 +315,7 @@ func (p *Server) loadAccountsFromStore(defaultUpstream *url.URL, defaultCfg stor
 					URL:               u,
 					APIKey:            r.APIKey,
 					HealthCheckMethod: hcMethod,
+					HealthCheckModel:  hcModel,
 					AccountID:         r.AccountID,
 					CreatedAt:         r.CreatedAt,
 					Weight:            r.Weight,

@@ -14,16 +14,16 @@ import (
 
 // 添加新节点（默认账号）。
 func (p *Server) addNode(name, rawURL, apiKey string, weight int) (*Node, error) {
-	return p.addNodeWithMethod(p.defaultAccount, name, rawURL, apiKey, weight, "")
+	return p.addNodeWithMethod(p.defaultAccount, name, rawURL, apiKey, weight, "", "")
 }
 
 // 添加指定账号的节点。
 func (p *Server) addNodeToAccount(acc *Account, name, rawURL, apiKey string, weight int) (*Node, error) {
-	return p.addNodeWithMethod(acc, name, rawURL, apiKey, weight, "")
+	return p.addNodeWithMethod(acc, name, rawURL, apiKey, weight, "", "")
 }
 
 // 添加指定账号的节点并自定义健康检查方式。
-func (p *Server) addNodeWithMethod(acc *Account, name, rawURL, apiKey string, weight int, healthMethod string) (*Node, error) {
+func (p *Server) addNodeWithMethod(acc *Account, name, rawURL, apiKey string, weight int, healthMethod string, healthModel string) (*Node, error) {
 	if acc == nil {
 		return nil, errors.New("account required")
 	}
@@ -45,13 +45,14 @@ func (p *Server) addNodeWithMethod(acc *Account, name, rawURL, apiKey string, we
 		healthMethod = defaultHealthCheckMethod
 	}
 	healthMethod = normalizeHealthCheckMethod(healthMethod)
+	model := chooseNonEmpty(healthModel, defaultHealthCheckModel)
 	if healthMethodRequiresAPIKey(healthMethod) && apiKey == "" {
 		// CLI/API 探活都需要密钥，缺失时统一降级到 HEAD，保证可用性。
 		p.logger.Printf("health check mode %s requires api key, fallback to head for node %s", healthMethod, name)
 		healthMethod = HealthCheckMethodHEAD
 	}
 	id := fmt.Sprintf("n-%d", time.Now().UnixNano())
-	node := &Node{ID: id, Name: name, URL: u, APIKey: apiKey, HealthCheckMethod: healthMethod, AccountID: acc.ID, CreatedAt: time.Now(), Weight: weight}
+	node := &Node{ID: id, Name: name, URL: u, APIKey: apiKey, HealthCheckMethod: healthMethod, HealthCheckModel: model, AccountID: acc.ID, CreatedAt: time.Now(), Weight: weight}
 
 	p.mu.Lock()
 	acc.Nodes[id] = node
@@ -62,7 +63,7 @@ func (p *Server) addNodeWithMethod(acc *Account, name, rawURL, apiKey string, we
 	needSwitch := cur == nil || curFailed || node.Weight < cur.Weight
 	var rec store.NodeRecord
 	if p.store != nil {
-		rec = store.NodeRecord{ID: id, Name: name, BaseURL: rawURL, APIKey: apiKey, HealthCheckMethod: healthMethod, AccountID: acc.ID, Weight: weight, CreatedAt: node.CreatedAt}
+		rec = store.NodeRecord{ID: id, Name: name, BaseURL: rawURL, APIKey: apiKey, HealthCheckMethod: healthMethod, HealthCheckModel: model, AccountID: acc.ID, Weight: weight, CreatedAt: node.CreatedAt}
 	}
 	p.mu.Unlock()
 
@@ -89,7 +90,7 @@ func (p *Server) addNodeWithMethod(acc *Account, name, rawURL, apiKey string, we
 	return node, nil
 }
 
-func (p *Server) updateNode(id, name, rawURL string, apiKey *string, weight int, healthMethod *string) error {
+func (p *Server) updateNode(id, name, rawURL string, apiKey *string, weight int, healthMethod *string, healthModel *string) error {
 	if rawURL == "" {
 		return errors.New("base_url required")
 	}
@@ -112,8 +113,12 @@ func (p *Server) updateNode(id, name, rawURL string, apiKey *string, weight int,
 		newAPIKey = *apiKey
 	}
 	desiredMethod := n.HealthCheckMethod
+	desiredModel := chooseNonEmpty(n.HealthCheckModel, defaultHealthCheckModel)
 	if healthMethod != nil {
 		desiredMethod = *healthMethod
+	}
+	if healthModel != nil {
+		desiredModel = chooseNonEmpty(*healthModel, defaultHealthCheckModel)
 	}
 	desiredMethod = normalizeHealthCheckMethod(desiredMethod)
 	if healthMethodRequiresAPIKey(desiredMethod) && newAPIKey == "" {
@@ -129,6 +134,7 @@ func (p *Server) updateNode(id, name, rawURL string, apiKey *string, weight int,
 	n.APIKey = newAPIKey
 	n.Weight = weight
 	n.HealthCheckMethod = desiredMethod
+	n.HealthCheckModel = desiredModel
 	acc := p.nodeAccount[id]
 	p.mu.Unlock()
 

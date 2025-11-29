@@ -12,6 +12,7 @@ type Node struct {
 	URL               *url.URL
 	APIKey            string
 	HealthCheckMethod string
+	HealthCheckModel  string // CLI 健康检查使用的模型，默认为 claude-haiku-4-5-20251001
 	AccountID         string
 	CreatedAt         time.Time
 	Metrics           metrics

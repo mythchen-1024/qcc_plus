@@ -61,6 +61,7 @@ func (s *Store) ensureNodesTable(ctx context.Context) error {
             base_url TEXT NOT NULL,
             api_key TEXT,
 			health_check_method VARCHAR(10) DEFAULT 'api',
+			health_check_model VARCHAR(128) DEFAULT '` + defaultHealthCheckModel + `',
 			account_id VARCHAR(64) NOT NULL DEFAULT '` + DefaultAccountID + `',
             weight INT DEFAULT 1,
             failed BOOLEAN DEFAULT FALSE,
@@ -135,6 +136,18 @@ func (s *Store) ensureNodesTable(ctx context.Context) error {
 		alterCtx, cancel := withTimeout(context.Background())
 		defer cancel()
 		if _, err := s.db.ExecContext(alterCtx, `ALTER TABLE nodes ADD COLUMN health_check_method VARCHAR(10) DEFAULT 'api' AFTER api_key`); err != nil {
+			return err
+		}
+	}
+
+	hasHealthModel, err := s.columnExists(context.Background(), "nodes", "health_check_model")
+	if err != nil {
+		return err
+	}
+	if !hasHealthModel {
+		alterCtx, cancel := withTimeout(context.Background())
+		defer cancel()
+		if _, err := s.db.ExecContext(alterCtx, `ALTER TABLE nodes ADD COLUMN health_check_model VARCHAR(128) DEFAULT '`+defaultHealthCheckModel+`' AFTER health_check_method`); err != nil {
 			return err
 		}
 	}

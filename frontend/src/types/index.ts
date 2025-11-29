@@ -11,6 +11,7 @@ export interface Node {
   base_url: string;
   weight: number;
   health_check_method?: 'api' | 'head' | 'cli';
+  health_check_model?: string;
   has_api_key?: boolean;
   active: boolean;
   failed: boolean;

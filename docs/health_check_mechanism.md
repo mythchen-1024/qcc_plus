@@ -51,11 +51,11 @@ if node.Metrics.FailStreak >= failLimit {
 
 #### 探活配置
 - **间隔**：`PROXY_HEALTH_INTERVAL_SEC`（默认 30 秒）
-- **超时**：5 秒
+- **超时**：5 秒（HEAD/API），15 秒（CLI）
 - **方法**（由 `health_check_method` 决定）：
-  - **api**：POST `/v1/messages`（需要 API Key）
+  - **api**：POST `/v1/messages`（需要 API Key），固定使用 `claude-3-5-haiku-20241022` 模型
   - **head**：HTTP HEAD 到 Base URL
-  - **cli**：容器内执行 `claude -p "hi" --non-interactive --timeout 10s`，使用 `ANTHROPIC_API_KEY/ANTHROPIC_AUTH_TOKEN/ANTHROPIC_BASE_URL`
+  - **cli**：执行 `claude -p "hi" --model <model>`，默认使用 `claude-haiku-4-5-20251001`（最便宜），可通过 `health_check_model` 自定义
   - ⚠️ **注意**：CLI 方式失败时不会自动降级，保留真实错误信息便于调试
 
 #### 执行逻辑
@@ -194,14 +194,15 @@ if recoveredNode.Weight < currentActiveNode.Weight {
 | `PROXY_RETRY_MAX` | 非 200 状态重试次数 | 3 |
 | `PROXY_HEALTH_CHECK_MODE` ⭐ | 全局默认健康检查方式：`cli` / `api` / `head` | `cli` |
 | `health_check_method` (节点字段) | 节点级别健康检查方式（优先级高于全局） | 继承全局 |
+| `health_check_model` (节点字段) | CLI 健康检查使用的模型（仅 CLI 方式有效） | `claude-haiku-4-5-20251001` |
 
 ### 健康检查方式对比
 
-| 方式 | 依赖 | 优点 | 适用场景 |
-|------|------|------|-----------|
-| CLI ⭐ | API Key、本地 `claude` CLI 命令 | **默认方式**；覆盖 Claude Code CLI 完整流程，最贴近实际使用 | 生产推荐；验证 CLI 路径与 API 代理链路 |
-| API | API Key，服务需开放 `/v1/messages` | 与 API 请求一致，直接验证 HTTP 端点 | 需要验证纯 API 写入能力（非 CLI 场景） |
-| HEAD | 无需密钥 | 开销最低，适合仅验证连通性 | 暂无密钥或只需要轻量心跳 |
+| 方式 | 依赖 | 优点 | 适用场景 | 成本控制 |
+|------|------|------|-----------|---------|
+| CLI ⭐ | API Key、本地 `claude` CLI 命令 | **默认方式**；覆盖 Claude Code CLI 完整流程，最贴近实际使用 | 生产推荐；验证 CLI 路径与 API 代理链路 | 可通过 `health_check_model` 自定义模型（默认 `claude-haiku-4-5-20251001`） |
+| API | API Key，服务需开放 `/v1/messages` | 与 API 请求一致，直接验证 HTTP 端点 | 需要验证纯 API 写入能力（非 CLI 场景） | 固定使用 `claude-3-5-haiku-20241022`，`max_tokens=1` |
+| HEAD | 无需密钥 | 开销最低，适合仅验证连通性 | 暂无密钥或只需要轻量心跳 | 零成本（不消耗 API 调用） |
 
 **注意**：
 - CLI 方式需要 API Key，如果节点缺少 API Key，会**自动降级为 HEAD** 方式并记录日志
@@ -279,6 +280,33 @@ PROXY_HEALTH_CHECK_MODE=head go run ./cmd/cccli proxy
 # 节点级别配置（优先级更高）
 # 在管理界面创建节点时指定 health_check_method
 ```
+
+### Q: 如何降低 CLI 健康检查的成本？
+A: CLI 健康检查默认使用 `claude-haiku-4-5-20251001` 模型（最便宜的模型）。你可以通过以下方式进一步控制成本：
+
+**方式 1：在创建节点时指定模型**（推荐）
+```json
+{
+  "name": "节点名称",
+  "base_url": "https://api.anthropic.com",
+  "api_key": "sk-ant-xxx",
+  "health_check_method": "cli",
+  "health_check_model": "claude-haiku-4-5-20251001"  // 使用便宜的 Haiku 模型
+}
+```
+
+**方式 2：使用 HEAD 方式**（零成本）
+如果只需要验证连通性，可以使用 HEAD 方式，完全不消耗 API 调用：
+```json
+{
+  "health_check_method": "head"
+}
+```
+
+**成本对比**：
+- **Haiku** (`claude-haiku-4-5-20251001`)：最便宜，每次健康检查约 $0.00001
+- **Sonnet** (`claude-sonnet-4-5-20250929`)：中等价格，每次健康检查约 $0.0001
+- **HEAD**：零成本，但只验证连通性不验证 API 调用能力
 
 ### Q: 可以手动恢复失败节点吗？
 A: 失败节点会自动探活恢复，无需手动操作。如果需要强制使用，可以：

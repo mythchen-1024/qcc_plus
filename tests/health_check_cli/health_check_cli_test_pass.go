@@ -99,7 +99,7 @@ func TestHealthCheckCLI(t *testing.T) {
 	}))
 	defer apiSrv.Close()
 
-	runner := func(ctx context.Context, image string, env map[string]string, prompt string) (string, error) {
+	runner := func(ctx context.Context, image string, env map[string]string, prompt string, model string) (string, error) {
 		return "ok", nil
 	}
 
@@ -133,7 +133,7 @@ func TestHealthCheckCLINoFallback(t *testing.T) {
 	}))
 	defer apiSrv.Close()
 
-	runner := func(ctx context.Context, image string, env map[string]string, prompt string) (string, error) {
+	runner := func(ctx context.Context, image string, env map[string]string, prompt string, model string) (string, error) {
 		return "", exec.ErrNotFound
 	}
 

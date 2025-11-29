@@ -8,8 +8,9 @@ import (
 
 const (
 	// DefaultAccountID 用于向后兼容的默认账号。
-	DefaultAccountID = "default"
-	defaultTimeout   = 5 * time.Second
+	DefaultAccountID        = "default"
+	defaultTimeout          = 5 * time.Second
+	defaultHealthCheckModel = "claude-haiku-4-5-20251001"
 )
 
 // NodeRecord mirrors persistent fields for a proxy node.
@@ -19,6 +20,7 @@ type NodeRecord struct {
 	BaseURL           string
 	APIKey            string
 	HealthCheckMethod string
+	HealthCheckModel  string
 	AccountID         string
 	Weight            int
 	Failed            bool

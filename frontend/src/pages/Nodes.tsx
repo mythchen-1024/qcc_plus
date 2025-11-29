@@ -18,12 +18,19 @@ interface EditForm {
   weight: string
   api_key: string
   health_check_method: 'api' | 'head' | 'cli'
+  health_check_model: string
 }
 
 const healthMethodOptions: { value: 'api' | 'head' | 'cli'; label: string }[] = [
   { value: 'api', label: 'API 调用 (/v1/messages)' },
   { value: 'head', label: 'HEAD 请求' },
   { value: 'cli', label: 'Claude Code CLI (Docker)' },
+]
+
+const modelOptions = [
+  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5（推荐，最便宜）' },
+  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
+  { value: 'claude-opus-4-20250514', label: 'Claude Opus 4（不推荐，最贵）' },
 ]
 
 export default function Nodes() {
@@ -38,7 +45,7 @@ export default function Nodes() {
   const [filter, setFilter] = useState('all')
   const [detailNode, setDetailNode] = useState<Node | null>(null)
   const [editingNode, setEditingNode] = useState<Node | null>(null)
-  const [editForm, setEditForm] = useState<EditForm>({ name: '', base_url: '', weight: '1', api_key: '', health_check_method: 'api' })
+  const [editForm, setEditForm] = useState<EditForm>({ name: '', base_url: '', weight: '1', api_key: '', health_check_method: 'api', health_check_model: 'claude-haiku-4-5-20251001' })
   const [savingOrder, setSavingOrder] = useState(false)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
@@ -112,6 +119,7 @@ export default function Nodes() {
       weight: String(editingNode.weight || 1),
       api_key: '',
       health_check_method: editingNode.health_check_method || 'api',
+      health_check_model: editingNode.health_check_model || 'claude-haiku-4-5-20251001',
     })
   }, [editingNode])
 
@@ -151,6 +159,13 @@ export default function Nodes() {
           options: healthMethodOptions,
         },
         {
+          name: 'health_check_model',
+          label: 'CLI 健康检查模型（仅 CLI 方式有效）',
+          type: 'select',
+          defaultValue: 'claude-haiku-4-5-20251001',
+          options: modelOptions,
+        },
+        {
           name: 'weight',
           label: '权重（值越小优先级越高）',
           type: 'number',
@@ -167,6 +182,7 @@ export default function Nodes() {
     if (!result) return
     const weight = parseInt(result.weight || '1', 10)
     const healthMethod = (result.health_check_method as 'api' | 'head' | 'cli' | undefined) || 'api'
+    const healthModel = (result.health_check_model as string) || 'claude-haiku-4-5-20251001'
     const apiKey = (result.api_key || '').trim()
     if (requiresApiKey(healthMethod) && !apiKey) {
       showToast('选择 API/CLI 健康检查时需填写 API Key', 'error')
@@ -180,6 +196,7 @@ export default function Nodes() {
           api_key: apiKey || undefined,
           weight: Number.isNaN(weight) || weight <= 0 ? 1 : weight,
           health_check_method: healthMethod,
+          health_check_model: healthModel,
         },
         accountId
       )
@@ -232,6 +249,7 @@ export default function Nodes() {
       return
     }
     const healthMethod = editForm.health_check_method || 'api'
+    const healthModel = editForm.health_check_model || 'claude-haiku-4-5-20251001'
     const apiKeyInput = editForm.api_key.trim()
     const hasKey = editingNode.has_api_key
     if (requiresApiKey(healthMethod) && !apiKeyInput && !hasKey) {
@@ -246,6 +264,7 @@ export default function Nodes() {
         weight,
         api_key: apiKeyInput ? apiKeyInput : undefined,
         health_check_method: healthMethod,
+        health_check_model: healthModel,
       })
       showToast('已保存')
       setEditingNode(null)
@@ -332,6 +351,7 @@ export default function Nodes() {
             base_url: n.base_url,
             weight: idx + 1,
             health_check_method: n.health_check_method || 'api',
+            health_check_model: n.health_check_model || 'claude-haiku-4-5-20251001',
           }),
         ),
       )
@@ -564,6 +584,8 @@ export default function Nodes() {
               {renderStat('名称', detailNode.name || '未命名')}
               {renderStat('Base URL', detailNode.base_url || '-')}
               {renderStat('健康检查', formatHealthMethod(detailNode.health_check_method))}
+              {detailNode.health_check_method === 'cli' &&
+                renderStat('健康检查模型', detailNode.health_check_model || 'claude-haiku-4-5-20251001')}
               {renderStat('权重', detailNode.weight ?? '-')} {renderStat('状态', statusInfo(detailNode).label)}
             </div>
             <div className="node-stats">
@@ -660,6 +682,25 @@ export default function Nodes() {
                   ))}
                 </select>
                 <span className="weight-hint">API/CLI 需要有效的 API Key，CLI 需 Docker</span>
+              </label>
+              <label>
+                CLI 健康检查模型
+                <select
+                  value={editForm.health_check_model}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, health_check_model: e.target.value }))
+                  }
+                  disabled={editForm.health_check_method !== 'cli'}
+                >
+                  {modelOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                {editForm.health_check_method !== 'cli' && (
+                  <span className="weight-hint">仅在 CLI 健康检查方式下生效</span>
+                )}
               </label>
               <label>
                 API Key（留空不改）
