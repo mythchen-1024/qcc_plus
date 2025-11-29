@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,21 +17,22 @@ import (
 
 // Builder 使用流式接口构建 Server 实例。
 type Builder struct {
-	upstreamRaw        string
-	upstreamKey        string
-	upstreamName       string
-	listenAddr         string
-	transport          http.RoundTripper
-	logger             *log.Logger
-	retries            int
-	failLimit          int
-	healthEvery        time.Duration
-	healthAllInterval  time.Duration
-	storeDSN           string
-	adminKey           string
-	defaultAccountName string
-	defaultProxyKey    string
-	cliRunner          CliRunner
+	upstreamRaw            string
+	upstreamKey            string
+	upstreamName           string
+	listenAddr             string
+	transport              http.RoundTripper
+	logger                 *log.Logger
+	retries                int
+	failLimit              int
+	healthEvery            time.Duration
+	healthAllInterval      time.Duration
+	healthCheckConcurrency int
+	storeDSN               string
+	adminKey               string
+	defaultAccountName     string
+	defaultProxyKey        string
+	cliRunner              CliRunner
 }
 
 // NewBuilder 构建带默认监听地址和日志的 Builder。
@@ -210,14 +212,34 @@ func (b *Builder) Build() (*Server, error) {
 
 	healthAllInterval := b.healthAllInterval
 	if healthAllInterval == 0 {
-		raw := os.Getenv("PROXY_HEALTH_CHECK_ALL_INTERVAL")
-		if raw == "" {
-			healthAllInterval = defaultHealthAllInterval
-		} else if d, err := time.ParseDuration(raw); err == nil {
-			healthAllInterval = d
+		if raw := os.Getenv("PROXY_HEALTH_CHECK_ALL_INTERVAL"); raw != "" {
+			if d, err := time.ParseDuration(raw); err == nil && d > 0 {
+				healthAllInterval = d
+			} else {
+				logger.Printf("invalid PROXY_HEALTH_CHECK_ALL_INTERVAL=%s, fallback to %v", raw, defaultHealthAllInterval)
+				healthAllInterval = defaultHealthAllInterval
+			}
+		} else if raw := os.Getenv("HEALTH_ALL_INTERVAL_MIN"); raw != "" {
+			if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+				healthAllInterval = time.Duration(n) * time.Minute
+			} else {
+				logger.Printf("invalid HEALTH_ALL_INTERVAL_MIN=%s, fallback to %v", raw, defaultHealthAllInterval)
+				healthAllInterval = defaultHealthAllInterval
+			}
 		} else {
-			logger.Printf("invalid PROXY_HEALTH_CHECK_ALL_INTERVAL=%s, fallback to %v", raw, defaultHealthAllInterval)
 			healthAllInterval = defaultHealthAllInterval
+		}
+	}
+
+	healthCheckConcurrency := b.healthCheckConcurrency
+	if healthCheckConcurrency <= 0 {
+		healthCheckConcurrency = defaultHealthCheckConcurrency
+		if raw := os.Getenv("HEALTH_CHECK_CONCURRENCY"); raw != "" {
+			if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+				healthCheckConcurrency = n
+			} else {
+				logger.Printf("invalid HEALTH_CHECK_CONCURRENCY=%s, fallback to %d", raw, defaultHealthCheckConcurrency)
+			}
 		}
 	}
 	healthRT := transport
@@ -281,7 +303,7 @@ func (b *Builder) Build() (*Server, error) {
 	}
 
 	if healthAllInterval > 0 {
-		srv.healthScheduler = NewHealthScheduler(srv, healthAllInterval, logger)
+		srv.healthScheduler = NewHealthScheduler(srv, healthAllInterval, healthCheckConcurrency, logger)
 	}
 
 	if st != nil {

@@ -6,7 +6,10 @@ import (
 	"time"
 )
 
-const defaultHealthAllInterval = 5 * time.Minute
+const (
+	defaultHealthAllInterval      = 10 * time.Minute
+	defaultHealthCheckConcurrency = 10
+)
 
 // HealthScheduler 定期探活所有节点（包括健康节点），避免状态盲区。
 type HealthScheduler struct {
@@ -16,21 +19,26 @@ type HealthScheduler struct {
 	wg       sync.WaitGroup
 	interval time.Duration
 	stopOnce sync.Once
+	workers  int
 }
 
 // NewHealthScheduler 创建全量健康检查调度器。
-func NewHealthScheduler(server *Server, interval time.Duration, logger *log.Logger) *HealthScheduler {
+func NewHealthScheduler(server *Server, interval time.Duration, workers int, logger *log.Logger) *HealthScheduler {
 	if logger == nil {
 		logger = log.Default()
 	}
 	if interval <= 0 {
 		interval = defaultHealthAllInterval
 	}
+	if workers <= 0 {
+		workers = defaultHealthCheckConcurrency
+	}
 	return &HealthScheduler{
 		server:   server,
 		logger:   logger,
 		stopCh:   make(chan struct{}),
 		interval: interval,
+		workers:  workers,
 	}
 }
 
@@ -110,7 +118,12 @@ func (h *HealthScheduler) checkAllNodes() {
 	}
 	p.mu.RUnlock()
 
-	total := 0
+	type checkTask struct {
+		acc *Account
+		id  string
+	}
+
+	tasks := make([]checkTask, 0)
 	for _, acc := range accs {
 		p.mu.RLock()
 		ids := make([]string, 0, len(acc.Nodes))
@@ -118,13 +131,40 @@ func (h *HealthScheduler) checkAllNodes() {
 			ids = append(ids, id)
 		}
 		p.mu.RUnlock()
-
 		for _, id := range ids {
-			total++
-			p.checkNodeHealth(acc, id, CheckSourceScheduled)
+			tasks = append(tasks, checkTask{acc: acc, id: id})
 		}
 	}
 
+	total := len(tasks)
+	h.logger.Printf("[HealthScheduler] total nodes to check: %d (concurrency=%d)", total, h.workers)
+
+	if total == 0 {
+		h.logger.Printf("[HealthScheduler] full health check finished in %v (nodes=%d)", time.Since(start), total)
+		return
+	}
+
+	sem := make(chan struct{}, h.workers)
+	var wg sync.WaitGroup
+
+	for _, task := range tasks {
+		wg.Add(1)
+		go func(t checkTask) {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					h.logger.Printf("[HealthScheduler] panic in health check: %v", r)
+				}
+			}()
+
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			p.checkNodeHealth(t.acc, t.id, CheckSourceScheduled)
+		}(task)
+	}
+
+	wg.Wait()
 	h.logger.Printf("[HealthScheduler] full health check finished in %v (nodes=%d)", time.Since(start), total)
 }
 
