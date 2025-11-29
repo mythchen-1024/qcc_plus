@@ -4,9 +4,9 @@
 ## 最后更新
 - **更新日期**: 2025-11-29
 - **更新人**: Claude Code
-- **当前版本**: v1.7.2（待发布）
-- **最新功能**: 健康检查并发化 + CLI 健康检查模型自定义
-- **最新更新**: 🔴 **紧急修复**服务器宕机问题（健康检查并发控制）
+- **当前版本**: v1.7.2
+- **最新功能**: 健康检查失败时立即触发节点切换
+- **最新更新**: 探活发现节点故障后秒级切换到下一个可用节点
 - **GitHub**: https://github.com/yxhpy/qcc_plus
 - **Docker Hub**: https://hub.docker.com/r/yxhpy520/qcc_plus
 
@@ -526,6 +526,16 @@ docker compose up -d
     </important_notes>
 
     <version_history description="版本发布历史">
+        <release version="v1.7.2" date="2025-11-29">
+            <description>健康检查失败立即切换</description>
+            <highlights>
+                - 探活发现节点故障后立即切换到下一个可用节点
+                - 发送节点离线通知和 WebSocket 事件
+                - 保持探活周期不变，实现秒级故障响应
+            </highlights>
+            <github>https://github.com/yxhpy/qcc_plus/releases/tag/v1.7.2</github>
+            <docker>yxhpy520/qcc_plus:v1.7.2</docker>
+        </release>
         <release version="v1.7.1" date="2025-11-27">
             <description>快速配置页面样式统一</description>
             <highlights>
