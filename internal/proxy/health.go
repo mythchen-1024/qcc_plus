@@ -233,6 +233,36 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 				rec = toRecord(n)
 				shouldPersist = true
 			}
+			// 如果是当前活跃节点且健康检查失败，立即触发节点切换
+			if acc != nil && id == acc.ActiveID {
+				// 将节点加入失败集合，触发重选
+				acc.FailedSet[id] = struct{}{}
+				// 异步触发节点切换（避免死锁，因为当前持有 p.mu 锁）
+				go func(account *Account, reason string) {
+					p.selectBestAndActivate(account, reason)
+				}(acc, fmt.Sprintf("健康检查失败: %s", pingErr))
+				// 发送节点离线通知
+				if p.notifyMgr != nil {
+					p.notifyMgr.Publish(notify.Event{
+						AccountID:  acc.ID,
+						EventType:  notify.EventNodeFailed,
+						Title:      "节点健康检查失败",
+						Content:    fmt.Sprintf("**节点名称**: %s\n**错误信息**: %s\n**检测时间**: %s", n.Name, pingErr, timeutil.FormatBeijingTime(time.Now())),
+						DedupKey:   n.ID,
+						OccurredAt: time.Now(),
+					})
+				}
+				// 发送 WebSocket 事件
+				if p.wsHub != nil {
+					p.wsHub.Broadcast(acc.ID, "node_status", map[string]interface{}{
+						"node_id":   n.ID,
+						"node_name": n.Name,
+						"status":    "offline",
+						"error":     pingErr,
+						"timestamp": timeutil.FormatBeijingTime(time.Now()),
+					})
+				}
+			}
 		}
 
 		hasNode = true
