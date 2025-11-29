@@ -215,12 +215,23 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 		nodeDisabled    bool
 		hasNode         bool
 		wasFailed       bool
+		activeID        string
+		activeWeight    int
 	)
+
+	// 默认使用最大 int 作为哨兵值，表示“无活跃节点”
+	activeWeight = int(^uint(0) >> 1)
 
 	p.mu.Lock()
 	n := p.nodeIndex[id]
 	if n != nil {
 		acc := p.nodeAccount[id]
+		if acc != nil {
+			activeID = acc.ActiveID
+			if active := acc.Nodes[activeID]; active != nil {
+				activeWeight = active.Weight
+			}
+		}
 		wasFailed = n.Failed
 		n.Metrics.LastHealthCheckAt = now
 		if latency > 0 {
@@ -297,6 +308,9 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 	if shouldPersist {
 		_ = p.store.UpsertNode(context.Background(), rec)
 	}
+	shouldPromote := ok && n != nil && !nodeDisabled &&
+		(wasFailed || activeID == "" || n.Weight < activeWeight)
+
 	if ok && wasFailed {
 		// 恢复后重新在健康节点中选择最优的一个。
 		if p.notifyMgr != nil && acc != nil && n != nil {
@@ -317,6 +331,9 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 				"timestamp": timeutil.FormatBeijingTime(time.Now()),
 			})
 		}
+	}
+
+	if shouldPromote {
 		p.maybePromoteRecovered(n)
 	}
 
