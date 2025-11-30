@@ -86,7 +86,6 @@ func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter
 	}
 	if mw != nil && mw.status != http.StatusOK {
 		node.Metrics.FailCount++
-		node.Metrics.FailStreak++
 	}
 	if mw != nil && mw.status == http.StatusOK {
 		node.Metrics.FailStreak = 0

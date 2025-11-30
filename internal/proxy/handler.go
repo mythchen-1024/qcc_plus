@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -205,12 +206,27 @@ func (p *Server) handler() http.Handler {
 			proxy.ServeHTTP(wrapFirstByteFlush(mw, streamState), r.WithContext(ctx))
 
 			p.recordMetrics(node.ID, start, mw, usage)
-			if mw.status != http.StatusOK {
+
+			upstreamStatus := 0
+			if us := mw.Header().Get("X-Upstream-Status"); us != "" {
+				if val, err := strconv.Atoi(us); err == nil {
+					upstreamStatus = val
+				}
+			}
+
+			failed := mw.status != http.StatusOK || upstreamStatus >= http.StatusInternalServerError
+			if failed {
 				errMsg := mw.Header().Get("X-Retry-Error")
 				if errMsg == "" {
-					errMsg = fmt.Sprintf("status %d", mw.status)
+					if upstreamStatus >= http.StatusInternalServerError {
+						errMsg = fmt.Sprintf("upstream status %d", upstreamStatus)
+					} else {
+						errMsg = fmt.Sprintf("status %d", mw.status)
+					}
 				}
-				p.handleFailure(node.ID, errMsg)
+				if p.shouldFail(node.ID, errMsg) {
+					p.handleFailure(node.ID, errMsg)
+				}
 			}
 			return
 		}

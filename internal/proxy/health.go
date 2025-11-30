@@ -35,6 +35,39 @@ const (
 // 默认健康检查方式（可被环境变量覆盖）；从 API 变更为 CLI，以便在无 HTTP 端点时也能探活。
 var defaultHealthCheckMethod = HealthCheckMethodCLI
 
+// shouldFail increments fail streak and returns true when the threshold is reached.
+func (p *Server) shouldFail(nodeID, errMsg string) bool {
+	if errMsg == "" {
+		errMsg = "unknown error"
+	}
+
+	p.mu.Lock()
+	node, ok := p.nodeIndex[nodeID]
+	if !ok {
+		p.mu.Unlock()
+		return false
+	}
+
+	node.Metrics.FailStreak++
+	node.LastError = errMsg
+
+	failStreak := node.Metrics.FailStreak
+	failLimit := int64(p.failLimit)
+	if failLimit < 1 {
+		failLimit = 1
+	}
+	nodeName := node.Name
+	p.mu.Unlock()
+
+	if failStreak < failLimit {
+		p.logger.Printf("[health] node %s failed (%d/%d): %s", nodeName, failStreak, failLimit, errMsg)
+		return false
+	}
+
+	p.logger.Printf("[health] node %s reached failure threshold (%d/%d), switching...", nodeName, failStreak, failLimit)
+	return true
+}
+
 // 处理失败：计数、记录错误、熔断并尝试切换。
 func (p *Server) handleFailure(nodeID string, errMsg string) {
 	if errMsg == "" {
@@ -61,6 +94,7 @@ func (p *Server) handleFailure(nodeID string, errMsg string) {
 		rec = toRecord(node)
 	}
 	failStreak := node.Metrics.FailStreak
+	failLimit := p.failLimit
 	nodeName := node.Name
 	p.mu.Unlock()
 
@@ -69,7 +103,7 @@ func (p *Server) handleFailure(nodeID string, errMsg string) {
 		_ = p.store.UpsertNode(context.Background(), rec)
 	}
 
-	p.logger.Printf("node %s marked failed immediately: %s", nodeName, errMsg)
+	p.logger.Printf("node %s marked failed (fail_streak=%d, fail_limit=%d): %s", nodeName, failStreak, failLimit, errMsg)
 	if p.notifyMgr != nil && acc != nil {
 		p.notifyMgr.Publish(notify.Event{
 			AccountID:  acc.ID,
