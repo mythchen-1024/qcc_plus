@@ -3,6 +3,11 @@ package store
 import (
 	"context"
 	"database/sql"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -15,6 +20,9 @@ func Open(dsn string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	configureConnPool(db)
+
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
@@ -72,4 +80,59 @@ func (s *Store) Close() error {
 		return nil
 	}
 	return s.db.Close()
+}
+
+// Stats returns the current database pool statistics for monitoring or logging.
+func (s *Store) Stats() sql.DBStats {
+	if s == nil || s.db == nil {
+		return sql.DBStats{}
+	}
+	return s.db.Stats()
+}
+
+const (
+	defaultMaxOpenConns   = 25
+	defaultMaxIdleConns   = 10
+	defaultConnMaxLifeSec = 300 // 5 minutes
+	defaultConnMaxIdleSec = 180 // 3 minutes
+)
+
+// configureConnPool applies sane defaults and env overrides for the MySQL connection pool.
+func configureConnPool(db *sql.DB) {
+	maxOpen := getEnvInt("MYSQL_MAX_OPEN_CONNS", defaultMaxOpenConns)
+	if maxOpen > 0 {
+		db.SetMaxOpenConns(maxOpen)
+	}
+
+	maxIdle := getEnvInt("MYSQL_MAX_IDLE_CONNS", defaultMaxIdleConns)
+	if maxIdle >= 0 {
+		db.SetMaxIdleConns(maxIdle)
+	}
+
+	lifeSeconds := getEnvInt("MYSQL_CONN_MAX_LIFETIME", defaultConnMaxLifeSec)
+	if lifeSeconds > 0 {
+		db.SetConnMaxLifetime(time.Duration(lifeSeconds) * time.Second)
+	}
+
+	idleSeconds := getEnvInt("MYSQL_CONN_MAX_IDLE_TIME", defaultConnMaxIdleSec)
+	if idleSeconds > 0 {
+		db.SetConnMaxIdleTime(time.Duration(idleSeconds) * time.Second)
+	}
+
+	log.Printf("store: mysql pool configured (maxOpen=%d, maxIdle=%d, life=%ds, idle=%ds)", db.Stats().MaxOpenConnections, maxIdle, lifeSeconds, idleSeconds)
+}
+
+// getEnvInt reads an int from env with fallback and safeguards against invalid values.
+func getEnvInt(key string, fallback int) int {
+	raw, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+
+	v, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || v < 0 {
+		log.Printf("store: invalid %s=%q, using default %d", key, raw, fallback)
+		return fallback
+	}
+	return v
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import Card from '../components/Card'
 import NodeCard from '../components/NodeCard'
@@ -43,6 +43,7 @@ export default function Monitor({ shared = false }: MonitorProps) {
   const [expireIn, setExpireIn] = useState<CreateMonitorShareRequest['expire_in']>('24h')
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const [healthEvents, setHealthEvents] = useState<Record<string, HealthCheckRecord>>({})
+  const lastNodeIdsRef = useRef('')
 
   const wsAccountId = shared ? undefined : accountId || undefined
   const { connected, lastMessage } = useMonitorWebSocket(wsAccountId, shareToken)
@@ -75,8 +76,17 @@ export default function Monitor({ shared = false }: MonitorProps) {
         const data = shared && shareToken
           ? await api.getSharedMonitor(shareToken)
           : await api.getMonitorDashboard(accountId)
+        const nodeIdsSignature = (data.nodes || []).map((n) => n.id).sort().join('|')
+        const nextSignature = `${shared ? 'shared' : accountId || 'default'}|${shareToken || ''}|${nodeIdsSignature}`
+
         setDashboard(data)
-        setHistoryRefreshKey((v) => v + 1)
+        setHistoryRefreshKey((v) => {
+          if (nextSignature !== lastNodeIdsRef.current) {
+            lastNodeIdsRef.current = nextSignature
+            return v + 1
+          }
+          return v
+        })
       } catch (err) {
         showToast((err as Error).message || '加载失败', 'error')
       } finally {

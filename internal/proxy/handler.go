@@ -195,14 +195,14 @@ func (p *Server) handler() http.Handler {
 			}
 
 			usage := &usage{}
-			proxy := p.newReverseProxy(node, usage)
+			proxy, streamState := p.newReverseProxy(node, usage)
 			p.logger.Printf("%s %s via %s (account=%s)", r.Method, r.URL.String(), node.Name, account.ID)
 
 			start := time.Now()
 			mw := &metricsWriter{ResponseWriter: w, status: http.StatusOK}
 			ctx := context.WithValue(r.Context(), accountContextKey{}, account)
 			ctx = context.WithValue(ctx, nodeContextKey{}, node)
-			proxy.ServeHTTP(mw, r.WithContext(ctx))
+			proxy.ServeHTTP(wrapFirstByteFlush(mw, streamState), r.WithContext(ctx))
 
 			p.recordMetrics(node.ID, start, mw, usage)
 			if mw.status != http.StatusOK {

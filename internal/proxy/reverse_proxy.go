@@ -12,6 +12,7 @@ import (
 	"net/http/httputil"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"qcc_plus/internal/notify"
@@ -160,11 +161,95 @@ func (u *usageReader) Close() error {
 	return err
 }
 
+const streamFlushInterval = 50 * time.Millisecond
+
+type streamState struct {
+	flag atomic.Bool
+}
+
+func (s *streamState) set(enabled bool) {
+	if s == nil {
+		return
+	}
+	s.flag.Store(enabled)
+}
+
+func (s *streamState) enabled() bool {
+	if s == nil {
+		return false
+	}
+	return s.flag.Load()
+}
+
+func boolLike(val string) bool {
+	v := strings.TrimSpace(strings.ToLower(val))
+	return v == "1" || v == "true" || v == "yes" || v == "on"
+}
+
+func streamFlagEnabled(v any) bool {
+	switch tv := v.(type) {
+	case bool:
+		return tv
+	case string:
+		return boolLike(tv)
+	default:
+		return false
+	}
+}
+
+func isStreamRequest(req *http.Request) bool {
+	if req == nil {
+		return false
+	}
+	if boolLike(req.URL.Query().Get("stream")) {
+		return true
+	}
+	if boolLike(req.Header.Get("stream")) || boolLike(req.Header.Get("x-stream")) {
+		return true
+	}
+	accept := strings.ToLower(req.Header.Get("Accept"))
+	return strings.Contains(accept, "text/event-stream")
+}
+
+type firstByteFlusher struct {
+	http.ResponseWriter
+	flusher http.Flusher
+	state   *streamState
+	flushed bool
+}
+
+func (f *firstByteFlusher) Write(p []byte) (int, error) {
+	n, err := f.ResponseWriter.Write(p)
+	if err == nil && f.state != nil && f.state.enabled() && !f.flushed && f.flusher != nil {
+		f.flusher.Flush()
+		f.flushed = true
+	}
+	return n, err
+}
+
+func (f *firstByteFlusher) Flush() {
+	if f.flusher != nil {
+		f.flusher.Flush()
+	}
+}
+
+func wrapFirstByteFlush(w http.ResponseWriter, state *streamState) http.ResponseWriter {
+	if state == nil {
+		return w
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return w
+	}
+	return &firstByteFlusher{ResponseWriter: w, flusher: flusher, state: state}
+}
+
 // 构建指向指定节点的反向代理。
-func (p *Server) newReverseProxy(node *Node, u *usage) *httputil.ReverseProxy {
+func (p *Server) newReverseProxy(node *Node, u *usage) (*httputil.ReverseProxy, *streamState) {
 	proxy := httputil.NewSingleHostReverseProxy(node.URL)
 	proxy.Transport = p.transport
 	proxy.FlushInterval = -1
+	streamingState := &streamState{}
 
 	// 清理工具定义，去除 Anthropic 未支持的字段。
 	cleanTools := func(body []byte) ([]byte, bool) {
@@ -238,6 +323,7 @@ func (p *Server) newReverseProxy(node *Node, u *usage) *httputil.ReverseProxy {
 
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
+		streaming := isStreamRequest(req)
 		originalDirector(req)
 		req.Host = node.URL.Host
 		if node.APIKey != "" {
@@ -257,6 +343,13 @@ func (p *Server) newReverseProxy(node *Node, u *usage) *httputil.ReverseProxy {
 				}
 				_ = req.Body.Close()
 
+				var payload map[string]any
+				if err := json.Unmarshal(bodyBytes, &payload); err == nil {
+					if streamFlagEnabled(payload["stream"]) {
+						streaming = true
+					}
+				}
+
 				if cleaned, ok := cleanTools(bodyBytes); ok {
 					bodyBytes = cleaned
 				}
@@ -266,6 +359,14 @@ func (p *Server) newReverseProxy(node *Node, u *usage) *httputil.ReverseProxy {
 				req.Header.Set("Content-Length", strconv.FormatInt(int64(len(bodyBytes)), 10))
 				req.Header.Del("Transfer-Encoding")
 			}
+		}
+
+		if streaming {
+			streamingState.set(true)
+			proxy.FlushInterval = streamFlushInterval
+		} else {
+			streamingState.set(false)
+			proxy.FlushInterval = -1
 		}
 	}
 
@@ -289,7 +390,7 @@ func (p *Server) newReverseProxy(node *Node, u *usage) *httputil.ReverseProxy {
 		http.Error(w, "upstream error", http.StatusBadGateway)
 	}
 
-	return proxy
+	return proxy, streamingState
 }
 
 // newPassthroughProxy 创建一个简单的透传代理，不做任何额外处理（不记录指标、不处理工具定义）。

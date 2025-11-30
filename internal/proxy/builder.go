@@ -15,6 +15,16 @@ import (
 	"qcc_plus/internal/store"
 )
 
+const (
+	defaultMaxIdleConns          = 200
+	defaultMaxIdleConnsPerHost   = 50
+	defaultMaxConnsPerHost       = 100
+	defaultIdleConnTimeout       = 90 * time.Second
+	defaultTLSHandshakeTimeout   = 10 * time.Second
+	defaultResponseHeaderTimeout = 30 * time.Second
+	defaultExpectContinueTimeout = 1 * time.Second
+)
+
 // Builder 使用流式接口构建 Server 实例。
 type Builder struct {
 	upstreamRaw            string
@@ -49,6 +59,68 @@ func chooseNonEmpty(vals ...string) string {
 	return ""
 }
 
+func parseEnvInt(key string, fallback int, logger *log.Logger) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			return n
+		}
+		if logger != nil {
+			logger.Printf("invalid %s=%s, fallback to %d", key, v, fallback)
+		}
+	}
+	return fallback
+}
+
+func parseEnvDuration(key string, fallback time.Duration, logger *log.Logger) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d >= 0 {
+			return d
+		}
+		if logger != nil {
+			logger.Printf("invalid %s=%s, fallback to %v", key, v, fallback)
+		}
+	}
+	return fallback
+}
+
+func parseEnvBool(key string, fallback bool, logger *log.Logger) bool {
+	if v := os.Getenv(key); v != "" {
+		switch strings.ToLower(v) {
+		case "1", "true", "yes", "on":
+			return true
+		case "0", "false", "no", "off":
+			return false
+		default:
+			if logger != nil {
+				logger.Printf("invalid %s=%s, fallback to %v", key, v, fallback)
+			}
+		}
+	}
+	return fallback
+}
+
+func buildTransportFromEnv(logger *log.Logger) http.RoundTripper {
+	base, ok := http.DefaultTransport.(*http.Transport)
+	var transport *http.Transport
+	if ok && base != nil {
+		transport = base.Clone()
+	} else {
+		transport = &http.Transport{}
+	}
+
+	transport.MaxIdleConns = parseEnvInt("PROXY_TRANSPORT_MAX_IDLE_CONNS", defaultMaxIdleConns, logger)
+	transport.MaxIdleConnsPerHost = parseEnvInt("PROXY_TRANSPORT_MAX_IDLE_CONNS_PER_HOST", defaultMaxIdleConnsPerHost, logger)
+	transport.MaxConnsPerHost = parseEnvInt("PROXY_TRANSPORT_MAX_CONNS_PER_HOST", defaultMaxConnsPerHost, logger)
+	transport.IdleConnTimeout = parseEnvDuration("PROXY_TRANSPORT_IDLE_CONN_TIMEOUT", defaultIdleConnTimeout, logger)
+	transport.TLSHandshakeTimeout = parseEnvDuration("PROXY_TRANSPORT_TLS_HANDSHAKE_TIMEOUT", defaultTLSHandshakeTimeout, logger)
+	transport.ResponseHeaderTimeout = parseEnvDuration("PROXY_TRANSPORT_RESPONSE_HEADER_TIMEOUT", defaultResponseHeaderTimeout, logger)
+	transport.ExpectContinueTimeout = parseEnvDuration("PROXY_TRANSPORT_EXPECT_CONTINUE_TIMEOUT", defaultExpectContinueTimeout, logger)
+	transport.DisableCompression = parseEnvBool("PROXY_TRANSPORT_DISABLE_COMPRESSION", false, logger)
+	transport.ForceAttemptHTTP2 = parseEnvBool("PROXY_TRANSPORT_FORCE_HTTP2", true, logger)
+
+	return transport
+}
+
 // WithUpstream 设置默认上游地址（必填）。
 func (b *Builder) WithUpstream(upstream string) *Builder {
 	b.upstreamRaw = upstream
@@ -75,7 +147,7 @@ func (b *Builder) WithListenAddr(addr string) *Builder {
 	return b
 }
 
-// WithTransport 注入自定义 RoundTripper；默认为 http.DefaultTransport。
+// WithTransport 注入自定义 RoundTripper；若为空则使用基于 http.DefaultTransport 并可通过环境变量调优的传输。
 func (b *Builder) WithTransport(t http.RoundTripper) *Builder {
 	b.transport = t
 	return b
@@ -180,13 +252,13 @@ func (b *Builder) Build() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	transport := b.transport
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
 	logger := b.logger
 	if logger == nil {
 		logger = log.Default()
+	}
+	transport := b.transport
+	if transport == nil {
+		transport = buildTransportFromEnv(logger)
 	}
 
 	aggregateInterval := defaultAggregateInterval
