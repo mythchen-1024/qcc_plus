@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 )
 
@@ -270,6 +271,8 @@ func (s *Store) ensureMetricsTables(ctx context.Context) error {
 		requests_total BIGINT DEFAULT 0,
 		requests_success BIGINT DEFAULT 0,
 		requests_failed BIGINT DEFAULT 0,
+		retry_attempts_total BIGINT DEFAULT 0,
+		retry_success BIGINT DEFAULT 0,
 		response_time_sum_ms BIGINT DEFAULT 0,
 		response_time_count BIGINT DEFAULT 0,
 		bytes_total BIGINT DEFAULT 0,
@@ -289,6 +292,8 @@ func (s *Store) ensureMetricsTables(ctx context.Context) error {
 		requests_total BIGINT DEFAULT 0,
 		requests_success BIGINT DEFAULT 0,
 		requests_failed BIGINT DEFAULT 0,
+		retry_attempts_total BIGINT DEFAULT 0,
+		retry_success BIGINT DEFAULT 0,
 		response_time_sum_ms BIGINT DEFAULT 0,
 		response_time_count BIGINT DEFAULT 0,
 		bytes_total BIGINT DEFAULT 0,
@@ -307,6 +312,8 @@ func (s *Store) ensureMetricsTables(ctx context.Context) error {
 		requests_total BIGINT DEFAULT 0,
 		requests_success BIGINT DEFAULT 0,
 		requests_failed BIGINT DEFAULT 0,
+		retry_attempts_total BIGINT DEFAULT 0,
+		retry_success BIGINT DEFAULT 0,
 		response_time_sum_ms BIGINT DEFAULT 0,
 		response_time_count BIGINT DEFAULT 0,
 		bytes_total BIGINT DEFAULT 0,
@@ -325,6 +332,8 @@ func (s *Store) ensureMetricsTables(ctx context.Context) error {
 		requests_total BIGINT DEFAULT 0,
 		requests_success BIGINT DEFAULT 0,
 		requests_failed BIGINT DEFAULT 0,
+		retry_attempts_total BIGINT DEFAULT 0,
+		retry_success BIGINT DEFAULT 0,
 		response_time_sum_ms BIGINT DEFAULT 0,
 		response_time_count BIGINT DEFAULT 0,
 		bytes_total BIGINT DEFAULT 0,
@@ -340,6 +349,36 @@ func (s *Store) ensureMetricsTables(ctx context.Context) error {
 	for _, stmt := range stmts {
 		if _, err := s.db.ExecContext(ctx, stmt); err != nil {
 			return err
+		}
+	}
+
+	// 兼容已有表，添加重试指标字段。
+	tables := []string{"node_metrics_raw", "node_metrics_hourly", "node_metrics_daily", "node_metrics_monthly"}
+	for _, tbl := range tables {
+		hasRetryAttempts, err := s.columnExists(context.Background(), tbl, "retry_attempts_total")
+		if err != nil {
+			return err
+		}
+		if !hasRetryAttempts {
+			alterCtx, cancel := withTimeout(context.Background())
+			if _, err := s.db.ExecContext(alterCtx, fmt.Sprintf(`ALTER TABLE %s ADD COLUMN retry_attempts_total BIGINT DEFAULT 0 AFTER requests_failed`, tbl)); err != nil {
+				cancel()
+				return err
+			}
+			cancel()
+		}
+
+		hasRetrySuccess, err := s.columnExists(context.Background(), tbl, "retry_success")
+		if err != nil {
+			return err
+		}
+		if !hasRetrySuccess {
+			alterCtx, cancel := withTimeout(context.Background())
+			if _, err := s.db.ExecContext(alterCtx, fmt.Sprintf(`ALTER TABLE %s ADD COLUMN retry_success BIGINT DEFAULT 0 AFTER retry_attempts_total`, tbl)); err != nil {
+				cancel()
+				return err
+			}
+			cancel()
 		}
 	}
 	return nil

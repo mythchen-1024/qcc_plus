@@ -259,6 +259,36 @@ func (p *Server) getActiveNode(acc ...*Account) (*Node, error) {
 	return p.getActiveNodeForAccount(p.defaultAccount)
 }
 
+// selectHealthyNodeExcluding 选择健康节点，排除 skipNodes
+func (p *Server) selectHealthyNodeExcluding(acc *Account, skipNodes map[string]bool) *Node {
+	if acc == nil {
+		return nil
+	}
+
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	var bestNode *Node
+	for id, n := range acc.Nodes {
+		if n.Failed || n.Disabled || p.isInFailedSet(acc, id) || skipNodes[id] {
+			continue
+		}
+
+		// 检查熔断器状态
+		if p.cbConfig.Enabled {
+			cb := p.getOrCreateCircuitBreaker(id)
+			if cb.GetState() == StateOpen {
+				continue // 跳过熔断中的节点
+			}
+		}
+
+		if bestNode == nil || n.Weight < bestNode.Weight {
+			bestNode = n
+		}
+	}
+	return bestNode
+}
+
 // isInFailedSet 判断节点是否在失败集合中。调用方需确保并发安全（外部加锁或只读场景）。
 func (p *Server) isInFailedSet(acc *Account, nodeID string) bool {
 	if acc == nil {
@@ -296,6 +326,104 @@ func (p *Server) selectBestAndActivate(acc *Account, reason ...string) (*Node, e
 		p.mu.Unlock()
 		return nil, ErrNoActiveNode
 	}
+
+	if p.warmupConfig.Enabled {
+		p.mu.Unlock()
+
+		p.logger.Printf("warming up node %s before activation", bestNode.Name)
+		successCount, err := p.warmupNode(bestNode)
+		if err != nil && p.logger != nil {
+			p.logger.Printf("warmup error for node %s: %v", bestNode.Name, err)
+		}
+
+		if !isNodeWarmedUp(successCount, p.warmupConfig) {
+			p.logger.Printf("node %s warmup failed (%d/%d success), trying next node", bestNode.Name, successCount, p.warmupConfig.Attempts)
+
+			skipNodes := make(map[string]bool)
+			skipNodes[bestID] = true
+			return p.selectBestAndActivateExcluding(acc, skipNodes, reason...)
+		}
+
+		p.logger.Printf("node %s warmed up successfully (%d/%d)", bestNode.Name, successCount, p.warmupConfig.Attempts)
+		p.mu.Lock()
+	}
+
+	acc.ActiveID = bestID
+	if p.store != nil {
+		_ = p.store.SetActive(context.Background(), acc.ID, bestID)
+	}
+	p.mu.Unlock()
+
+	if p.notifyMgr != nil && acc != nil && prevID != bestID {
+		fromName := "-"
+		if prevNode != nil {
+			fromName = prevNode.Name
+		}
+		p.notifyMgr.Publish(notify.Event{
+			AccountID:  acc.ID,
+			EventType:  notify.EventNodeSwitched,
+			Title:      "节点自动切换",
+			Content:    fmt.Sprintf("**从节点**: %s\n**到节点**: %s (权重: %d)\n**切换原因**: %s", chooseNonEmpty(fromName, "-"), bestNode.Name, bestNode.Weight, switchReason),
+			DedupKey:   fmt.Sprintf("switch:%s", acc.ID),
+			OccurredAt: time.Now(),
+		})
+	}
+
+	return bestNode, nil
+}
+
+// selectBestAndActivateExcluding 选择最佳节点并激活（排除指定节点）
+// 用于预热失败后尝试下一个节点
+func (p *Server) selectBestAndActivateExcluding(acc *Account, skipNodes map[string]bool, reason ...string) (*Node, error) {
+	if acc == nil {
+		return nil, ErrNoActiveNode
+	}
+	switchReason := "自动切换"
+	if len(reason) > 0 && reason[0] != "" {
+		switchReason = reason[0]
+	}
+
+	p.mu.Lock()
+	prevID := acc.ActiveID
+	prevNode := acc.Nodes[prevID]
+	bestID := ""
+	var bestNode *Node
+
+	for id, n := range acc.Nodes {
+		if n.Failed || n.Disabled || p.isInFailedSet(acc, id) || (skipNodes != nil && skipNodes[id]) {
+			continue
+		}
+		if bestNode == nil || n.Weight < bestNode.Weight || (n.Weight == bestNode.Weight && n.CreatedAt.Before(bestNode.CreatedAt)) {
+			bestNode = n
+			bestID = id
+		}
+	}
+
+	if bestNode == nil {
+		p.mu.Unlock()
+		return nil, ErrNoActiveNode
+	}
+
+	if p.warmupConfig.Enabled {
+		p.mu.Unlock()
+
+		p.logger.Printf("warming up node %s before activation", bestNode.Name)
+		successCount, _ := p.warmupNode(bestNode)
+
+		if !isNodeWarmedUp(successCount, p.warmupConfig) {
+			p.logger.Printf("node %s warmup failed (%d/%d success), trying next node", bestNode.Name, successCount, p.warmupConfig.Attempts)
+
+			if skipNodes == nil {
+				skipNodes = make(map[string]bool)
+			}
+			skipNodes[bestID] = true
+			return p.selectBestAndActivateExcluding(acc, skipNodes, reason...)
+		}
+
+		p.logger.Printf("node %s warmed up successfully", bestNode.Name)
+		p.mu.Lock()
+	}
+
 	acc.ActiveID = bestID
 	if p.store != nil {
 		_ = p.store.SetActive(context.Background(), acc.ID, bestID)

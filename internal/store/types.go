@@ -85,6 +85,8 @@ type MetricsRecord struct {
 	RequestsTotal       int64
 	RequestsSuccess     int64
 	RequestsFailed      int64
+	RetryAttemptsTotal  int64
+	RetrySuccess        int64
 	ResponseTimeSumMs   int64 // 总响应耗时（毫秒），配合 ResponseTimeCount 计算平均值
 	ResponseTimeCount   int64
 	BytesTotal          int64
@@ -103,6 +105,8 @@ type MetricsHourly struct {
 	RequestsTotal       int64
 	RequestsSuccess     int64
 	RequestsFailed      int64
+	RetryAttemptsTotal  int64
+	RetrySuccess        int64
 	ResponseTimeSumMs   int64
 	ResponseTimeCount   int64
 	BytesTotal          int64
@@ -120,6 +124,8 @@ type MetricsDaily struct {
 	RequestsTotal       int64
 	RequestsSuccess     int64
 	RequestsFailed      int64
+	RetryAttemptsTotal  int64
+	RetrySuccess        int64
 	ResponseTimeSumMs   int64
 	ResponseTimeCount   int64
 	BytesTotal          int64
@@ -137,6 +143,8 @@ type MetricsMonthly struct {
 	RequestsTotal       int64
 	RequestsSuccess     int64
 	RequestsFailed      int64
+	RetryAttemptsTotal  int64
+	RetrySuccess        int64
 	ResponseTimeSumMs   int64
 	ResponseTimeCount   int64
 	BytesTotal          int64

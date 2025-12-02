@@ -189,45 +189,90 @@ func (p *Server) handler() http.Handler {
 				return
 			}
 
-			node, err := p.getActiveNodeForAccount(account)
-			if err != nil {
-				http.Error(w, "no active upstream node", http.StatusServiceUnavailable)
-				return
-			}
-
-			usage := &usage{}
-			proxy, streamState := p.newReverseProxy(node, usage)
-			p.logger.Printf("%s %s via %s (account=%s)", r.Method, r.URL.String(), node.Name, account.ID)
-
-			start := time.Now()
-			mw := &metricsWriter{ResponseWriter: w, status: http.StatusOK}
-			ctx := context.WithValue(r.Context(), accountContextKey{}, account)
-			ctx = context.WithValue(ctx, nodeContextKey{}, node)
-			proxy.ServeHTTP(wrapFirstByteFlush(mw, streamState), r.WithContext(ctx))
-
-			p.recordMetrics(node.ID, start, mw, usage)
-
-			upstreamStatus := 0
-			if us := mw.Header().Get("X-Upstream-Status"); us != "" {
-				if val, err := strconv.Atoi(us); err == nil {
-					upstreamStatus = val
+			skipNodes := make(map[string]bool)
+			firstAttemptFailed := false
+			for attempt := 0; attempt < p.retryConfig.MaxAttempts; attempt++ {
+				node := p.selectHealthyNodeExcluding(account, skipNodes)
+				if node == nil {
+					break
 				}
-			}
 
-			failed := mw.status != http.StatusOK || upstreamStatus >= http.StatusInternalServerError
-			if failed {
-				errMsg := mw.Header().Get("X-Retry-Error")
-				if errMsg == "" {
-					if upstreamStatus >= http.StatusInternalServerError {
-						errMsg = fmt.Sprintf("upstream status %d", upstreamStatus)
-					} else {
-						errMsg = fmt.Sprintf("status %d", mw.status)
+				// 检查熔断器
+				var cb *CircuitBreaker
+				if p.cbConfig.Enabled {
+					cb = p.getOrCreateCircuitBreaker(node.ID)
+					if !cb.AllowRequest() {
+						p.logger.Printf("node %s circuit breaker is open, skipping", node.Name)
+						skipNodes[node.ID] = true
+						continue // 跳过此节点，尝试下一个
 					}
 				}
+
+				usage := &usage{}
+				proxy, streamState := p.newReverseProxy(node, usage)
+				p.logger.Printf("%s %s via %s (account=%s, attempt=%d/%d)", r.Method, r.URL.String(), node.Name, account.ID, attempt+1, p.retryConfig.MaxAttempts)
+
+				start := time.Now()
+				mw := &metricsWriter{ResponseWriter: w, status: http.StatusOK}
+				ctx := context.WithValue(r.Context(), accountContextKey{}, account)
+				ctx = context.WithValue(ctx, nodeContextKey{}, node)
+				ctx, cancel := context.WithTimeout(ctx, p.retryConfig.PerRequestTimeout)
+				proxy.ServeHTTP(wrapFirstByteFlush(mw, streamState), r.WithContext(ctx))
+				cancel()
+
+				upstreamStatus := extractUpstreamStatus(mw)
+				statusForRetry := upstreamStatus
+				if statusForRetry == 0 {
+					statusForRetry = mw.status
+				}
+
+				failed := mw.status != http.StatusOK || statusForRetry >= http.StatusInternalServerError
+
+				if attempt == 0 && failed {
+					firstAttemptFailed = true
+				}
+
+				if cb != nil {
+					cb.RecordResult(!failed)
+				}
+
+				shouldRetry := failed && statusForRetry >= http.StatusInternalServerError && shouldRetryStatus(statusForRetry, p.retryConfig)
+				isLastAttempt := attempt == p.retryConfig.MaxAttempts-1
+				finalAttempt := !failed || !shouldRetry || isLastAttempt
+
+				var retryAttemptsTotal int64
+				if finalAttempt {
+					retryAttemptsTotal = int64(attempt + 1)
+				}
+				var retrySuccess int64
+				if finalAttempt && !failed && firstAttemptFailed {
+					retrySuccess = 1
+				}
+
+				p.recordMetrics(node.ID, start, mw, usage, retryAttemptsTotal, retrySuccess)
+
+				if !failed {
+					return
+				}
+
+				if !shouldRetry {
+					return
+				}
+
+				errMsg := extractErrorMessage(mw, statusForRetry)
 				if p.shouldFail(node.ID, errMsg) {
 					p.handleFailure(node.ID, errMsg)
 				}
+				skipNodes[node.ID] = true
+
+				if attempt < p.retryConfig.MaxAttempts-1 {
+					p.logger.Printf("retry attempt %d/%d, node %s failed: %s", attempt+1, p.retryConfig.MaxAttempts, node.Name, errMsg)
+					backoff := calculateBackoff(attempt, p.retryConfig)
+					time.Sleep(backoff)
+				}
 			}
+
+			http.Error(w, "all nodes failed after retry", http.StatusBadGateway)
 			return
 		}
 
@@ -309,6 +354,34 @@ func (p *Server) requireSession(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r.WithContext(ctx))
 	}
+}
+
+func extractUpstreamStatus(mw *metricsWriter) int {
+	if mw == nil {
+		return 0
+	}
+	if us := mw.Header().Get("X-Upstream-Status"); us != "" {
+		if val, err := strconv.Atoi(us); err == nil {
+			return val
+		}
+	}
+	return 0
+}
+
+func extractErrorMessage(mw *metricsWriter, upstreamStatus int) string {
+	if mw == nil {
+		return "unknown error"
+	}
+	if msg := mw.Header().Get("X-Retry-Error"); msg != "" {
+		return msg
+	}
+	if upstreamStatus >= http.StatusInternalServerError {
+		return fmt.Sprintf("upstream status %d", upstreamStatus)
+	}
+	if mw.status != 0 {
+		return fmt.Sprintf("status %d", mw.status)
+	}
+	return "unknown error"
 }
 
 // extractAPIKey 从请求中提取代理 API Key。

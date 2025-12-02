@@ -52,10 +52,18 @@ type Server struct {
 	claudeConfigCache map[string]claudeConfigEntry
 	claudeConfigMu    sync.RWMutex
 
+	warmupConfig WarmupConfig
+
 	tunnelMgr *tunnel.Manager
 	tunnelMu  sync.Mutex
 
 	wsHub *WSHub
+
+	retryConfig RetryConfig
+
+	circuitBreakers map[string]*CircuitBreaker // 每个节点一个熔断器
+	cbMu            sync.RWMutex               // 保护 circuitBreakers
+	cbConfig        CircuitBreakerConfig       // 熔断器配置
 }
 
 // Start 运行反向代理并阻塞直到关闭。
@@ -116,6 +124,29 @@ func (p *Server) Stop() {
 // Handler 暴露 HTTP 处理器，便于测试或自定义服务器。
 func (p *Server) Handler() http.Handler {
 	return p.handler()
+}
+
+// getOrCreateCircuitBreaker 获取或创建节点的熔断器
+func (p *Server) getOrCreateCircuitBreaker(nodeID string) *CircuitBreaker {
+	p.cbMu.RLock()
+	cb, ok := p.circuitBreakers[nodeID]
+	p.cbMu.RUnlock()
+
+	if ok {
+		return cb
+	}
+
+	p.cbMu.Lock()
+	defer p.cbMu.Unlock()
+
+	// Double-check
+	if cb, ok := p.circuitBreakers[nodeID]; ok {
+		return cb
+	}
+
+	cb = NewCircuitBreaker(p.cbConfig)
+	p.circuitBreakers[nodeID] = cb
+	return cb
 }
 
 // startSettingsWatcher 周期刷新设置缓存，用于跨实例热更新。

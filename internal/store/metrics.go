@@ -33,10 +33,12 @@ func (s *Store) InsertMetrics(ctx context.Context, rec MetricsRecord) error {
 	defer cancel()
 	_, err := s.db.ExecContext(ctx, `INSERT INTO node_metrics_raw (
 		account_id, node_id, ts, requests_total, requests_success, requests_failed,
+		retry_attempts_total, retry_success,
 		response_time_sum_ms, response_time_count, bytes_total,
 		input_tokens_total, output_tokens_total, first_byte_time_sum_ms, stream_duration_sum_ms)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		rec.AccountID, rec.NodeID, rec.Timestamp, rec.RequestsTotal, rec.RequestsSuccess, rec.RequestsFailed,
+		rec.RetryAttemptsTotal, rec.RetrySuccess,
 		rec.ResponseTimeSumMs, rec.ResponseTimeCount, rec.BytesTotal,
 		rec.InputTokensTotal, rec.OutputTokensTotal, rec.FirstByteTimeSumMs, rec.StreamDurationSumMs)
 	return err
@@ -78,6 +80,7 @@ func (s *Store) QueryMetrics(ctx context.Context, q MetricsQuery) ([]MetricsReco
 	var args []interface{}
 	b := &strings.Builder{}
 	fmt.Fprintf(b, `SELECT account_id, node_id, %s AS ts, requests_total, requests_success, requests_failed,
+		retry_attempts_total, retry_success,
 		response_time_sum_ms, response_time_count, bytes_total, input_tokens_total, output_tokens_total,
 		first_byte_time_sum_ms, stream_duration_sum_ms, %s AS created_at
 		FROM %s WHERE account_id=?`, timeCol, createdCol, table)
@@ -115,6 +118,7 @@ func (s *Store) QueryMetrics(ctx context.Context, q MetricsQuery) ([]MetricsReco
 	for rows.Next() {
 		var r MetricsRecord
 		if err := rows.Scan(&r.AccountID, &r.NodeID, &r.Timestamp, &r.RequestsTotal, &r.RequestsSuccess, &r.RequestsFailed,
+			&r.RetryAttemptsTotal, &r.RetrySuccess,
 			&r.ResponseTimeSumMs, &r.ResponseTimeCount, &r.BytesTotal, &r.InputTokensTotal, &r.OutputTokensTotal,
 			&r.FirstByteTimeSumMs, &r.StreamDurationSumMs, &r.CreatedAt); err != nil {
 			return nil, err
@@ -311,10 +315,12 @@ func (s *Store) AggregateMetrics(ctx context.Context, accountID string, target M
 	b := &strings.Builder{}
 	fmt.Fprintf(b, `INSERT INTO %s (
 		account_id, node_id, bucket_start, requests_total, requests_success, requests_failed,
+		retry_attempts_total, retry_success,
 		response_time_sum_ms, response_time_count, bytes_total, input_tokens_total, output_tokens_total,
 		first_byte_time_sum_ms, stream_duration_sum_ms)
 		SELECT account_id, node_id, %s AS bucket_start,
 			SUM(requests_total), SUM(requests_success), SUM(requests_failed),
+			SUM(retry_attempts_total), SUM(retry_success),
 			SUM(response_time_sum_ms), SUM(response_time_count), SUM(bytes_total),
 			SUM(input_tokens_total), SUM(output_tokens_total), SUM(first_byte_time_sum_ms), SUM(stream_duration_sum_ms)
 		FROM %s WHERE %s >= ? AND %s < ?`, dstTable, bucketExpr, srcTable, srcTimeCol, srcTimeCol)
@@ -326,6 +332,7 @@ func (s *Store) AggregateMetrics(ctx context.Context, accountID string, target M
 	}
 	b.WriteString(" GROUP BY account_id, node_id, bucket_start ON DUPLICATE KEY UPDATE ")
 	b.WriteString("requests_total=VALUES(requests_total), requests_success=VALUES(requests_success), requests_failed=VALUES(requests_failed), ")
+	b.WriteString("retry_attempts_total=VALUES(retry_attempts_total), retry_success=VALUES(retry_success), ")
 	b.WriteString("response_time_sum_ms=VALUES(response_time_sum_ms), response_time_count=VALUES(response_time_count), ")
 	b.WriteString("bytes_total=VALUES(bytes_total), input_tokens_total=VALUES(input_tokens_total), output_tokens_total=VALUES(output_tokens_total), ")
 	b.WriteString("first_byte_time_sum_ms=VALUES(first_byte_time_sum_ms), stream_duration_sum_ms=VALUES(stream_duration_sum_ms)")

@@ -40,7 +40,7 @@ func (mw *metricsWriter) Write(b []byte) (int, error) {
 	return mw.ResponseWriter.Write(b)
 }
 
-func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter, u *usage) {
+func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter, u *usage, retryAttempts, retrySuccess int64) {
 	end := time.Now()
 	var (
 		nodeRec      store.NodeRecord
@@ -97,7 +97,7 @@ func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter
 	}
 	if p.store != nil {
 		nodeRec = toRecord(node)
-		metricsRec = buildMetricsRecord(accountID, nodeID, start, end, mw, u)
+		metricsRec = buildMetricsRecord(accountID, nodeID, start, end, mw, u, retryAttempts, retrySuccess)
 	}
 	nodeName = node.Name
 	nodeIDCopy = node.ID
@@ -170,16 +170,18 @@ func (p *Server) recordMetrics(nodeID string, start time.Time, mw *metricsWriter
 	}
 }
 
-func buildMetricsRecord(accountID, nodeID string, start, end time.Time, mw *metricsWriter, u *usage) *store.MetricsRecord {
+func buildMetricsRecord(accountID, nodeID string, start, end time.Time, mw *metricsWriter, u *usage, retryAttempts, retrySuccess int64) *store.MetricsRecord {
 	rec := &store.MetricsRecord{
-		AccountID:         accountID,
-		NodeID:            nodeID,
-		Timestamp:         end.UTC(),
-		RequestsTotal:     1,
-		RequestsSuccess:   1,
-		RequestsFailed:    0,
-		ResponseTimeSumMs: end.Sub(start).Milliseconds(),
-		ResponseTimeCount: 1,
+		AccountID:          accountID,
+		NodeID:             nodeID,
+		Timestamp:          end.UTC(),
+		RequestsTotal:      1,
+		RequestsSuccess:    1,
+		RequestsFailed:     0,
+		RetryAttemptsTotal: retryAttempts,
+		RetrySuccess:       retrySuccess,
+		ResponseTimeSumMs:  end.Sub(start).Milliseconds(),
+		ResponseTimeCount:  1,
 	}
 	if mw != nil {
 		rec.BytesTotal = mw.bytes

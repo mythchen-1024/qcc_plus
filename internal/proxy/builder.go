@@ -358,6 +358,7 @@ func (b *Builder) Build() (*Server, error) {
 		accountByID:      make(map[string]*Account),
 		nodeIndex:        make(map[string]*Node),
 		nodeAccount:      make(map[string]*Account),
+		circuitBreakers:  make(map[string]*CircuitBreaker),
 		listenAddr:       b.listenAddr,
 		transport:        transport,
 		healthRT:         healthRT,
@@ -369,6 +370,9 @@ func (b *Builder) Build() (*Server, error) {
 		sessionMgr:       NewSessionManager(defaultSessionTTL),
 		metricsScheduler: metricsScheduler,
 		wsHub:            hub,
+		retryConfig:      loadRetryConfig(),
+		cbConfig:         loadCircuitBreakerConfig(),
+		warmupConfig:     loadWarmupConfig(),
 	}
 
 	if st != nil {
