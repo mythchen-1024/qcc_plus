@@ -13,16 +13,21 @@ import (
 
 type metricsWriter struct {
 	http.ResponseWriter
-	firstWrite bool
-	firstAt    time.Time
-	lastAt     time.Time
-	bytes      int64
-	status     int
+	firstWrite  bool
+	wroteHeader bool
+	firstAt     time.Time
+	lastAt      time.Time
+	bytes       int64
+	status      int
 }
 
 func (mw *metricsWriter) Header() http.Header { return mw.ResponseWriter.Header() }
 
 func (mw *metricsWriter) WriteHeader(code int) {
+	if mw.wroteHeader {
+		return
+	}
+	mw.wroteHeader = true
 	mw.status = code
 	mw.ResponseWriter.WriteHeader(code)
 }

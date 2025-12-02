@@ -309,7 +309,13 @@ func (p *Server) handler() http.Handler {
 				}
 			}
 
-			http.Error(w, "all nodes failed after retry", http.StatusBadGateway)
+			// 检查响应是否已写入（避免重复调用 WriteHeader）
+			if _, ok := w.(interface{ Header() http.Header }); ok {
+				if w.Header().Get("Content-Type") == "" {
+					// 响应头未写入，可以安全调用 http.Error
+					http.Error(w, "all nodes failed after retry", http.StatusBadGateway)
+				}
+			}
 			return
 		}
 
