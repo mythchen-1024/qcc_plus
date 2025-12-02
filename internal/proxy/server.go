@@ -53,6 +53,7 @@ type Server struct {
 	claudeConfigMu    sync.RWMutex
 
 	warmupConfig WarmupConfig
+	warmupSem    chan struct{}
 
 	tunnelMgr *tunnel.Manager
 	tunnelMu  sync.Mutex

@@ -197,6 +197,7 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 	if strings.TrimSpace(source) == "" {
 		source = CheckSourceScheduled
 	}
+	isWarmup := strings.EqualFold(source, "warmup")
 
 	now := time.Now()
 
@@ -312,9 +313,11 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 			// 如果是当前活跃节点且健康检查失败，立即触发节点切换
 			if acc != nil && id == acc.ActiveID {
 				// 异步触发节点切换（避免死锁，因为当前持有 p.mu 锁）
-				go func(account *Account, reason string) {
-					p.selectBestAndActivate(account, reason)
-				}(acc, fmt.Sprintf("健康检查失败: %s", pingErr))
+				if !isWarmup {
+					go func(account *Account, reason string) {
+						p.selectBestAndActivate(account, reason)
+					}(acc, fmt.Sprintf("健康检查失败: %s", pingErr))
+				}
 				// 发送节点离线通知
 				if p.notifyMgr != nil {
 					p.notifyMgr.Publish(notify.Event{
@@ -357,7 +360,7 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 	shouldPromote := ok && n != nil && !nodeDisabled &&
 		(wasFailed || activeID == "" || n.Weight < activeWeight)
 
-	if ok && wasFailed {
+	if ok && wasFailed && !isWarmup {
 		// 恢复后重新在健康节点中选择最优的一个。
 		if p.notifyMgr != nil && acc != nil && n != nil {
 			p.notifyMgr.Publish(notify.Event{
@@ -379,7 +382,7 @@ func (p *Server) checkNodeHealth(acc *Account, id string, source string) {
 		}
 	}
 
-	if shouldPromote {
+	if shouldPromote && !isWarmup {
 		p.maybePromoteRecovered(n)
 	}
 

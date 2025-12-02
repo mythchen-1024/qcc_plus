@@ -364,6 +364,9 @@ func (b *Builder) Build() (*Server, error) {
 		runner = b.cliRunner
 	}
 
+	warmupConcurrency := parseEnvInt("WARMUP_CONCURRENCY", defaultWarmupConcurrency, logger)
+	warmupConcurrency = normalizeWarmupConcurrency(warmupConcurrency, logger)
+
 	hub := NewWSHub()
 	go hub.Run()
 
@@ -387,6 +390,7 @@ func (b *Builder) Build() (*Server, error) {
 		retryConfig:      loadRetryConfig(),
 		cbConfig:         loadCircuitBreakerConfig(),
 		warmupConfig:     loadWarmupConfig(),
+		warmupSem:        make(chan struct{}, warmupConcurrency),
 	}
 
 	if st != nil {

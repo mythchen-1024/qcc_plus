@@ -28,6 +28,7 @@ services:
       PROXY_RETRY_MAX: 3
       PROXY_FAIL_THRESHOLD: 3
       PROXY_HEALTH_INTERVAL_SEC: 30
+      WARMUP_CONCURRENCY: 1
       PROXY_MYSQL_DSN: qcc:example@tcp(mysql:3306)/qcc_proxy?parseTime=true
     ports:
       - "8000:8000"

@@ -3,7 +3,15 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
+)
+
+const (
+	// 默认 warmup 并发，优先保护小规格机器。
+	defaultWarmupConcurrency = 1
+	// 上限收紧到 2，避免一次性拉起过多 CLI 进程。
+	maxWarmupConcurrency = 2
 )
 
 // WarmupConfig 预热配置
@@ -45,12 +53,32 @@ func loadWarmupConfig() WarmupConfig {
 	return cfg
 }
 
+// normalizeWarmupConcurrency 将并发度限制在 [1, maxWarmupConcurrency] 区间。
+func normalizeWarmupConcurrency(n int, logger *log.Logger) int {
+	if n <= 0 {
+		n = defaultWarmupConcurrency
+	}
+	if n > maxWarmupConcurrency {
+		if logger != nil {
+			logger.Printf("reduce warmup concurrency from %d to %d to protect low-resource host", n, maxWarmupConcurrency)
+		}
+		n = maxWarmupConcurrency
+	}
+	if n < 1 {
+		n = 1
+	}
+	return n
+}
+
 // warmupNode 对节点进行预热探测
 // 返回 (成功次数, 错误)
 func (p *Server) warmupNode(node *Node) (int, error) {
 	if node == nil {
 		return 0, fmt.Errorf("warmup: node is nil")
 	}
+
+	release := p.acquireWarmupSlot()
+	defer release()
 
 	cfg := p.warmupConfig
 	attempts := cfg.Attempts
@@ -104,4 +132,15 @@ func (p *Server) warmupNode(node *Node) (int, error) {
 // isNodeWarmedUp 检查节点是否预热成功
 func isNodeWarmedUp(successCount int, cfg WarmupConfig) bool {
 	return successCount >= cfg.RequiredSuccess
+}
+
+// acquireWarmupSlot 获取一次 warmup 并发令牌，返回释放函数。
+func (p *Server) acquireWarmupSlot() func() {
+	sem := p.warmupSem
+	if sem == nil {
+		return func() {}
+	}
+
+	sem <- struct{}{}
+	return func() { <-sem }
 }
