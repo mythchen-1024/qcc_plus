@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -191,7 +192,23 @@ func (p *Server) handler() http.Handler {
 
 			skipNodes := make(map[string]bool)
 			firstAttemptFailed := false
+			baseCtx := context.WithValue(r.Context(), accountContextKey{}, account)
+			baseCtx = context.WithValue(baseCtx, nodeContextKey{}, nil)
+			overallDeadline := time.Time{}
+			if p.retryConfig.TotalTimeout > 0 {
+				overallDeadline = time.Now().Add(p.retryConfig.TotalTimeout)
+			}
+			var bodyBytes []byte
+			if r.Body != nil {
+				bodyBytes, _ = io.ReadAll(r.Body)
+				r.Body.Close()
+			}
 			for attempt := 0; attempt < p.retryConfig.MaxAttempts; attempt++ {
+				reqForAttempt := r.Clone(baseCtx)
+				if len(bodyBytes) > 0 {
+					reqForAttempt.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+					reqForAttempt.ContentLength = int64(len(bodyBytes))
+				}
 				node := p.selectHealthyNodeExcluding(account, skipNodes)
 				if node == nil {
 					break
@@ -214,10 +231,27 @@ func (p *Server) handler() http.Handler {
 
 				start := time.Now()
 				mw := &metricsWriter{ResponseWriter: w, status: http.StatusOK}
-				ctx := context.WithValue(r.Context(), accountContextKey{}, account)
-				ctx = context.WithValue(ctx, nodeContextKey{}, node)
-				ctx, cancel := context.WithTimeout(ctx, p.retryConfig.PerRequestTimeout)
-				proxy.ServeHTTP(wrapFirstByteFlush(mw, streamState), r.WithContext(ctx))
+
+				// 计算本次尝试的超时时间：按配置的 per-attempt 优先，其次单次超时，再受总超时约束
+				timeout := p.retryConfig.PerRequestTimeout
+				if len(p.retryConfig.PerAttemptTimeouts) > attempt {
+					timeout = p.retryConfig.PerAttemptTimeouts[attempt]
+				}
+				if !overallDeadline.IsZero() {
+					remaining := time.Until(overallDeadline)
+					if remaining <= 0 {
+						http.Error(w, "all nodes failed after retry", http.StatusBadGateway)
+						return
+					}
+					if remaining < timeout {
+						timeout = remaining
+					}
+				}
+
+				attemptCtx := context.WithValue(baseCtx, nodeContextKey{}, node)
+				attemptCtx, cancel := context.WithTimeout(attemptCtx, timeout)
+				reqForAttempt = reqForAttempt.WithContext(attemptCtx)
+				proxy.ServeHTTP(wrapFirstByteFlush(mw, streamState), reqForAttempt)
 				cancel()
 
 				upstreamStatus := extractUpstreamStatus(mw)
