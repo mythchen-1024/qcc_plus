@@ -109,6 +109,9 @@ log "building with VERSION=$VERSION GIT_COMMIT=$GIT_COMMIT BUILD_DATE=$BUILD_DAT
 log "validating docker compose config ($COMPOSE_FILE)"
 $DOCKER_COMPOSE -p "$PROJECT_NAME" -f "$COMPOSE_FILE" config >/dev/null
 
+log "cleaning up old containers with fixed names"
+docker rm -f "${PROJECT_NAME}_proxy" "${PROJECT_NAME}_mysql" 2>/dev/null || true
+
 log "stopping existing containers (volumes preserved)"
 $DOCKER_COMPOSE -p "$PROJECT_NAME" -f "$COMPOSE_FILE" down --remove-orphans || true
 
