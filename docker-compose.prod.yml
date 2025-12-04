@@ -54,9 +54,11 @@ services:
       WARMUP_REQUIRED_SUCCESS: 1
 
       # ========== HTTP 重试细节 ==========
+      # 注意：系统会自动尝试所有可用节点（节点数 * 2 次循环）
+      # RETRY_MAX_ATTEMPTS 已弃用，仅保留用于内部 backoff 计算
       RETRY_MAX_ATTEMPTS: 2
       RETRY_PER_REQUEST_TIMEOUT_SEC: 60
-      RETRY_TOTAL_TIMEOUT_SEC: 120
+      RETRY_TOTAL_TIMEOUT_SEC: 120  # 总超时时间（控制最终放弃时间）
       RETRY_PER_ATTEMPT_TIMEOUTS_SEC: 60,60
       RETRY_BACKOFF_MIN_MS: 100
       RETRY_BACKOFF_MAX_MS: 500
