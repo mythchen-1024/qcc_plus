@@ -1,9 +1,9 @@
 # 项目记忆文件
 
 ## 元信息
-- **更新日期**: 2025-12-02
+- **更新日期**: 2025-12-04
 - **当前版本**: v1.8.0
-- **最新功能**: 重试超时优化配置（总超时25s + 递减超时12/6/3s）+ 修复 request body 重用问题
+- **最新功能**: 测试环境容错调优（重试 4 次，超时 18/12/6/3s，总超时 40s；健康检查阈值与熔断策略放宽，减少误判）
 - **GitHub**: https://github.com/yxhpy/qcc_plus
 - **Docker Hub**: https://hub.docker.com/r/yxhpy520/qcc_plus
 
@@ -50,6 +50,13 @@ docker compose up -d
 | `PROXY_HEALTH_INTERVAL_SEC` | 探活间隔（秒） | 30 |
 | `PROXY_MYSQL_DSN` | MySQL 连接 | - |
 | `ADMIN_API_KEY` | 管理员密钥 | admin |
+
+## 测试环境默认参数（`docker-compose.test.yml`）
+- 重试与超时：`PROXY_RETRY_MAX/RETRY_MAX_ATTEMPTS=4`；单次超时 18/12/6/3s，`RETRY_TOTAL_TIMEOUT_SEC=40`，`RETRY_ON_STATUS=408,429,502,503,504`
+- 健康检查：`PROXY_FAIL_THRESHOLD=5`，`PROXY_HEALTH_INTERVAL_SEC=45`，`HEALTH_ALL_INTERVAL_MIN=15`，CLI 并发 `HEALTH_CHECK_CONCURRENCY_CLI=1`
+- 熔断：窗口 180s，失败率 0.9，连续失败 15 次，冷却 90s，半开探测 8 次
+- 预热：`WARMUP_ATTEMPTS=2`，`WARMUP_TIMEOUT_MS=12000`
+- 传输层超时：TLS 握手 15s，响应头 45s
 
 ## 项目特异规则
 
