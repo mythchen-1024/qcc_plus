@@ -1,23 +1,5 @@
 version: "3.7"
 services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: example
-      MYSQL_DATABASE: qcc_proxy
-      MYSQL_USER: qcc
-      MYSQL_PASSWORD: example
-    command: ["--default-authentication-plugin=mysql_native_password", "--max_connections=200"]
-    ports:
-      - "${MYSQL_PORT:-3307}:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "qcc", "-pexample"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   proxy:
     build: .
     environment:
@@ -29,12 +11,6 @@ services:
       PROXY_FAIL_THRESHOLD: 3
       PROXY_HEALTH_INTERVAL_SEC: 30
       WARMUP_CONCURRENCY: 1
-      PROXY_MYSQL_DSN: qcc:example@tcp(mysql:3306)/qcc_proxy?parseTime=true
+      PROXY_MYSQL_DSN: root:root@tcp(192.168.0.1:3306)/qcc_proxy?parseTime=true
     ports:
-      - "8000:8000"
-    depends_on:
-      mysql:
-        condition: service_healthy
-
-volumes:
-  mysql_data:
+      - "9030:8000"
