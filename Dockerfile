@@ -1,5 +1,7 @@
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/golang:1.21.5 AS build
+# arm架构：swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/golang:1.21-alpine3.18-linuxarm64
 WORKDIR /app
+ENV GOPROXY=https://goproxy.cn,direct
 COPY . .
 RUN go mod download
 ARG VERSION
@@ -10,12 +12,14 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o /app/ccproxy ./cmd/cccli
 
 # 下载 cloudflared
+# arm架构 swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/debian:bookworm-slim-linuxarm64
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/debian:bookworm-slim AS tools
 RUN apt-get update && apt-get install -y curl ca-certificates && \
     curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /cloudflared && \
     chmod +x /cloudflared
 
 # 使用 debian-slim 作为运行时基础镜像（而不是 distroless），以支持 shell 和 entrypoint 脚本
+# arm架构 swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/debian:bookworm-slim-linuxarm64
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/debian:bookworm-slim
 WORKDIR /app
 
