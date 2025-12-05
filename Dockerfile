@@ -1,4 +1,4 @@
-FROM golang:1.21 AS build
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/golang:1.21.5 AS build
 WORKDIR /app
 COPY . .
 RUN go mod download
@@ -10,13 +10,13 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o /app/ccproxy ./cmd/cccli
 
 # 下载 cloudflared
-FROM debian:bookworm-slim AS tools
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/debian:bookworm-slim AS tools
 RUN apt-get update && apt-get install -y curl ca-certificates && \
     curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /cloudflared && \
     chmod +x /cloudflared
 
 # 使用 debian-slim 作为运行时基础镜像（而不是 distroless），以支持 shell 和 entrypoint 脚本
-FROM debian:bookworm-slim
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/debian:bookworm-slim
 WORKDIR /app
 
 # 安装运行时依赖（包括 Node.js 20，用于 Claude CLI）
